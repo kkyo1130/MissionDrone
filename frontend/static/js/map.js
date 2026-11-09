@@ -63,14 +63,29 @@ const viewer = new Cesium.Viewer('viewer', {
 });
 
 viewer.scene.globe.depthTestAgainstTerrain = false;
-viewer.camera.flyTo({
-  destination: Cesium.Cartesian3.fromDegrees(
-    gridOriginWgs84[0],
-    gridOriginWgs84[1],
-    3000,
-  ),
-  duration: 0,
-});
+// Frame the actual simulated city instead of viewing it from 3 km away.
+const cityCenterLocal = new Cesium.Cartesian3(
+  gridSpec.shape[0] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[1] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[2] * gridSpec.voxelSizeM / 3,
+);
+const cityOrigin = Cesium.Cartesian3.fromDegrees(...gridOriginWgs84);
+const cityTransform = Cesium.Transforms.eastNorthUpToFixedFrame(cityOrigin);
+const cityCenter = Cesium.Matrix4.multiplyByPoint(cityTransform, cityCenterLocal, new Cesium.Cartesian3());
+const cityRadius = Math.hypot(
+  gridSpec.shape[0] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[1] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[2] * gridSpec.voxelSizeM / 2,
+);
+const cityBounds = new Cesium.BoundingSphere(cityCenter, cityRadius);
+function focusCity() {
+  viewer.camera.flyToBoundingSphere(cityBounds, {
+    duration: 0.8,
+    offset: new Cesium.HeadingPitchRange(-0.8, -0.65, cityRadius * 2.15),
+  });
+}
+focusCity();
+document.getElementById('btnFocus').addEventListener('click', focusCity);
 
 const origin = Cesium.Cartesian3.fromDegrees(...gridOriginWgs84);
 const enuToFixed = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
@@ -331,6 +346,23 @@ let routeMarkers = [];
 let droneParts = [];
 let playbackListener = null;
 let playbackStartedAt = 0;
+let playbackPositions = null;
+let playbackFinished = false;
+const replayButton = document.getElementById('btnReplay');
+const pauseButton = document.getElementById('btnPause');
+const playbackProgress = document.getElementById('playbackProgress');
+function setPlaybackControls(enabled) {
+  replayButton.disabled = !enabled;
+  pauseButton.disabled = !enabled;
+}
+pauseButton.addEventListener('click', () => {
+  if (!playbackPositions || playbackFinished) return;
+  viewer.clock.shouldAnimate = !viewer.clock.shouldAnimate;
+  pauseButton.textContent = viewer.clock.shouldAnimate ? 'Ⅱ 일시정지' : '▶ 계속 재생';
+});
+replayButton.addEventListener('click', () => {
+  if (playbackPositions) startRoutePlayback(playbackPositions);
+});
 const playbackDurationSeconds = 18;
 const droneBodyColor = Cesium.Color.fromCssColorString('#e9f5ff');
 const droneAccentColor = Cesium.Color.fromCssColorString('#3f99ff');
@@ -408,6 +440,11 @@ function makeDrone(positionProperty) {
 function startRoutePlayback(positions) {
   clearRoutePlayback();
   if (!positions.length) return;
+  playbackPositions = positions.slice();
+  playbackFinished = false;
+  setPlaybackControls(true);
+  pauseButton.textContent = 'Ⅱ 일시정지';
+  playbackProgress.textContent = '0%';
   if (positions.length === 1) positions = [positions[0], positions[0]];
   addRoutePin(positions[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
   addRoutePin(positions[positions.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
@@ -434,9 +471,13 @@ function startRoutePlayback(positions) {
   setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
   playbackListener = (clock) => {
     const elapsed = Cesium.JulianDate.secondsDifference(clock.currentTime, playbackStartedAt);
+    const progress = Math.min(100, Math.max(0, Math.round(elapsed / playbackDurationSeconds * 100)));
+    playbackProgress.textContent = `${progress}%`;
     if (elapsed >= playbackDurationSeconds) {
       viewer.clock.onTick.removeEventListener(playbackListener);
       playbackListener = null;
+      playbackFinished = true;
+      pauseButton.disabled = true;
       setHudText('routeCaption', '도착 지점 도달 · 모의 비행 완료');
     }
   };
@@ -485,7 +526,11 @@ async function findRoute() {
   });
 
   startRoutePlayback(positions);
-  viewer.zoomTo(routeEntity);
+  // Keep the city and both endpoints in view throughout the playback.
+  focusCity();
+  document.body.classList.remove('settings-open');
+  settingsToggle.setAttribute('aria-expanded', 'false');
+  settingsToggle.textContent = '⚙ 임무 설정';
   const type = missionTypeInput.value;
   const label = { inspection: '시설 점검', disaster: '재난 대응', delivery: '물류 배송' }[type];
   const detail = `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`;
