@@ -100,3 +100,35 @@ def test_route_rejects_invalid_or_blocked_points():
 def test_invalid_weather_parameters_are_rejected():
     response = client.get("/api/risk-map", params={"wind_speed": -1})
     assert response.status_code == 422
+
+
+def test_osm_footprint_voxelization_matches_height_and_polygon():
+    from app.core.voxel import GridSpec, voxelize_osm_buildings
+
+    # A 10 x 10 m building at the local origin, 25 m tall.
+    origin = (126.645, 37.385, 0.0)
+    lon_step = 10 / (111320 * np.cos(np.radians(origin[1])))
+    lat_step = 10 / 111132
+    building = {
+        "coordinates": [
+            [origin[0], origin[1]],
+            [origin[0] + lon_step, origin[1]],
+            [origin[0] + lon_step, origin[1] + lat_step],
+            [origin[0], origin[1] + lat_step],
+        ],
+        "height_m": 25.0,
+        "min_height_m": 0.0,
+    }
+    grid = voxelize_osm_buildings(GridSpec(4, 4, 5, 10), origin, [building])
+    assert grid[0, 0, 0] == 0
+    assert grid[0, 0, 2] == 0
+    assert grid[0, 0, 3] == 1
+    assert grid[3, 3, 0] == 1
+
+
+def test_osm_height_provenance():
+    from app.main import _osm_height
+
+    assert _osm_height({"height": "42 m"}) == (42.0, 0.0, "tagged_height")
+    assert _osm_height({"building:levels": "5"}) == (16.0, 0.0, "estimated_from_levels")
+    assert _osm_height({}) == (12.0, 0.0, "estimated_default")
