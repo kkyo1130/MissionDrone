@@ -38,12 +38,12 @@
 ## 3. 세부 기능 구현 체크리스트
 
 ### F00. 개발 환경 및 기존 코드 이관
-- [ ] 기존 메이커톤 코드와 데이터 확보 및 라이선스 확인
-- [ ] Cesium/복셀/A* 코드 구조와 좌표계 파악
-- [ ] `backend/`(FastAPI), `frontend/`(CesiumJS), `data/`, `docs/` 구성
-- [ ] Python 가상환경·의존성·pytest, MySQL 설정, `.env.example`
-- [ ] `GET /health` 및 CORS 설정
-- [ ] 로컬 통합 실행·README 사용법
+- [x] 기존 메이커톤 코드와 데이터 확보 및 라이선스 확인 (원본 코드 이관 권한 확인; 원본에 LICENSE 및 별도 데이터 파일은 없어 [이관 기록](docs/F00-MIGRATION.md)에 명시)
+- [x] Cesium/복셀/A* 코드 구조와 좌표계 파악 (데모 복셀을 로컬 ENU/WGS84로 표시)
+- [x] `backend/`(FastAPI), `frontend/`(CesiumJS), `data/`, `docs/` 구성
+- [x] Python 가상환경·의존성·pytest, MySQL 설정, `.env.example` (MySQL 서비스만 구성; DB 연동은 F07)
+- [x] `GET /health` 및 CORS 설정
+- [x] 로컬 통합 실행·README 사용법 (pytest 및 브라우저에서 API/화면 확인)
 
 ### F01. 3D 도시 환경 및 위험도
 - [ ] 3D 건물·장애물 공간을 복셀로 표현

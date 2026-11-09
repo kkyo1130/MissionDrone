@@ -1,0 +1,55 @@
+from fastapi.testclient import TestClient
+
+from app.main import OCCUPANCY, app
+
+client = TestClient(app)
+
+
+def test_health_and_dashboard():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+    dashboard = client.get("/")
+    assert dashboard.status_code == 200
+    assert "APP_GRID_SPEC" in dashboard.text
+
+
+def test_risk_map_returns_voxel_units_and_free_points():
+    response = client.get("/api/risk-map", params={"threshold": 0.9})
+    assert response.status_code == 200
+    result = response.json()
+    assert result["grid_shape"] == [32, 32, 12]
+    assert result["voxel_size_m"] == 10
+    assert all(0.9 <= point["risk"] <= 1.0 for point in result["points"])
+
+
+def test_route_returns_valid_path():
+    response = client.post(
+        "/api/route",
+        json={"start": [2, 2, 6], "end": [28, 28, 6], "vehicle_type": "passenger"},
+    )
+    assert response.status_code == 200
+    result = response.json()
+    assert result["path"][0] == result["start"]
+    assert result["path"][-1] == result["end"]
+    assert result["path_length"] == len(result["path"])
+    assert 0.0 <= result["average_risk"] <= 1.0
+    assert all(OCCUPANCY[tuple(point)] == 1 for point in result["path"])
+
+
+def test_route_rejects_invalid_or_blocked_points():
+    out_of_bounds = client.post(
+        "/api/route", json={"start": [32, 0, 0], "end": [28, 28, 6]}
+    )
+    assert out_of_bounds.status_code == 422
+
+    blocked = client.post(
+        "/api/route", json={"start": [6, 6, 0], "end": [28, 28, 6]}
+    )
+    assert blocked.status_code == 422
+
+
+def test_invalid_weather_parameters_are_rejected():
+    response = client.get("/api/risk-map", params={"wind_speed": -1})
+    assert response.status_code == 422
