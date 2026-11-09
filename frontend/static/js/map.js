@@ -475,6 +475,52 @@ function renderBuildingVolume(building, index, voxelSizeM) {
   }
 }
 
+function renderOsmBuilding(building, index) {
+  if (!Array.isArray(building.coordinates) || building.coordinates.length < 3) return;
+  const hierarchy = building.coordinates.flatMap((point) => [point[0], point[1]]);
+  const color = ['#7796b0', '#8aa5b9', '#6e8a9d', '#a2aeb9'][index % 4];
+  const entity = viewer.entities.add({
+    name: building.name,
+    polygon: {
+      hierarchy: Cesium.Cartesian3.fromDegreesArray(hierarchy),
+      height: Number(building.min_height_m) || 0,
+      extrudedHeight: Number(building.height_m),
+      material: Cesium.Color.fromCssColorString(color).withAlpha(0.92),
+      outline: true,
+      outlineColor: Cesium.Color.fromCssColorString('#273d52'),
+    },
+    description: 'OSM 건물 · 높이 ' + building.height_m + 'm (' +
+      (building.height_source === 'tagged_height' ? 'OSM 높이 태그' : '추정 높이') + ')',
+  });
+  obstacleEntities.push(entity);
+}
+
+async function importOsmStudyArea() {
+  const button = document.getElementById('btnOsmBuildings');
+  const label = document.getElementById('osmImportStatus');
+  button.disabled = true;
+  label.textContent = 'OSM 건물 윤곽 조회 및 복셀화 중 (최대 약 45초)...';
+  try {
+    const center_lon = Number(document.getElementById('osmCenterLon').value);
+    const center_lat = Number(document.getElementById('osmCenterLat').value);
+    const response = await fetch('/api/environment/osm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({center_lon, center_lat}),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(formatApiError(result.detail));
+    label.textContent = 'OSM ' + result.buildings_count + '개 건물 반영 · 높이 추정 ' +
+      result.height_estimates + '개 · 화면 새로고침 중';
+    window.location.reload();
+  } catch (error) {
+    label.textContent = '실제 건물 적용 실패: ' + error.message +
+      ' (기존 환경 유지)';
+    button.disabled = false;
+  }
+}
+document.getElementById('btnOsmBuildings').addEventListener('click', importOsmStudyArea);
+
 async function loadEnvironment() {
   const response = await fetch('/api/environment');
   if (!response.ok) throw new Error('환경 복셀 API 요청 실패 (HTTP ' + response.status + ')');
@@ -485,7 +531,14 @@ async function loadEnvironment() {
 
   obstacleEntities.forEach((entity) => viewer.entities.remove(entity));
   obstacleEntities = [];
-  if (Array.isArray(data.buildings) && data.buildings.length) {
+  if (data.environment_kind === 'osm_buildings') {
+    cityGroundEntities.forEach((entity) => viewer.entities.remove(entity));
+    cityGroundEntities = [];
+    data.buildings.forEach((building, index) => renderOsmBuilding(building, index));
+    const label = document.getElementById('osmImportStatus');
+    label.textContent = 'OSM 실건물 ' + data.buildings.length + '개 · 점유 복셀 ' +
+      data.blocked_voxels.length + '개 · 미등록 건물/높이 추정 주의';
+  } else if (Array.isArray(data.buildings) && data.buildings.length) {
     renderSyntheticDistrict(data.voxel_size_m);
     data.buildings.forEach((building, index) => {
       renderBuildingVolume(building, index, data.voxel_size_m);
