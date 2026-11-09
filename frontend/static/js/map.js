@@ -423,7 +423,7 @@ async function importOsmStudyArea() {
   const button = document.getElementById('btnOsmBuildings');
   const label = document.getElementById('osmImportStatus');
   button.disabled = true;
-  label.textContent = 'OSM 건물 윤곽 조회 및 복셀화 중 (최대 약 45초)...';
+  label.textContent = 'OSM 실제 건물 윤곽 조회 및 복셀화 중...';
   try {
     const center_lon = Number(document.getElementById('osmCenterLon').value);
     const center_lat = Number(document.getElementById('osmCenterLat').value);
@@ -464,9 +464,14 @@ async function loadEnvironment() {
       data.blocked_voxels.length + '개 · 미등록 건물/높이 추정 주의';
   } else {
     const label = document.getElementById('osmImportStatus');
-    label.textContent = 'OSM 건물 데이터 없음 · 위의 “선택 범위 실제 3D 건물 적용” 버튼으로 가져오세요. 가상 건물은 표시하지 않습니다.';
+    label.textContent = '송도 실제 OSM 건물을 자동으로 불러오는 중입니다. 잠시 기다려 주세요.';
     obstacleCount = 0;
     updateLayerStatus();
+    // Fetch after the UI has loaded, rather than blocking FastAPI startup.
+    // A failed request keeps the map usable and leaves the manual retry button.
+    if (!document.getElementById('btnOsmBuildings').disabled) {
+      void importOsmStudyArea();
+    }
     return;
   }
   obstacleEntities.forEach((entity) => { entity.show = showObstaclesInput.checked; });
