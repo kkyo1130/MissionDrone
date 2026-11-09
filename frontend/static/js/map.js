@@ -395,86 +395,6 @@ function addCityBox(collection, x, y, z, width, depth, height, color, outline = 
   return entity;
 }
 
-function renderSyntheticDistrict(voxelSizeM) {
-  cityGroundEntities.forEach((entity) => viewer.entities.remove(entity));
-  cityGroundEntities = [];
-  const width = gridSpec.shape[0] * voxelSizeM;
-  const depth = gridSpec.shape[1] * voxelSizeM;
-  // Decorative ground surfaces sit just above the Cesium ellipsoid so
-  // they are visible; they stay well below the first flyable voxel center
-  // (5 m), and are not treated as pathfinding obstacles.
-  addCityBox(cityGroundEntities, width / 2, depth / 2, 0.18,
-    width, depth, 0.3, '#25434c');
-  const streetColor = '#3b5262';
-  const markingsColor = '#99b1bd';
-  const horizontalStreetY = 14 * voxelSizeM;
-  addCityBox(cityGroundEntities, width / 2, horizontalStreetY, 0.37,
-    width, voxelSizeM * 0.9, 0.06, streetColor);
-  for (const x of [3, 29]) {
-    addCityBox(cityGroundEntities, x * voxelSizeM, depth / 2, 0.37,
-      voxelSizeM * 0.8, depth, 0.06, streetColor);
-  }
-  for (let x = voxelSizeM * 1.5; x < width - voxelSizeM; x += voxelSizeM * 2.5) {
-    addCityBox(cityGroundEntities, x, horizontalStreetY, 0.43,
-      voxelSizeM * 0.95, 0.2, 0.025, markingsColor);
-  }
-}
-
-function renderBuildingVolume(building, index, voxelSizeM) {
-  const minimum = building.min;
-  const maximum = building.max;
-  if (!Array.isArray(minimum) || !Array.isArray(maximum) ||
-      minimum.length !== 3 || maximum.length !== 3 ||
-      !minimum.every((value, axis) => Number.isInteger(value) && value >= 0 &&
-        Number.isInteger(maximum[axis]) && maximum[axis] > value &&
-        maximum[axis] <= gridSpec.shape[axis])) {
-    console.warn('Skipping invalid building geometry', building);
-    return;
-  }
-  const x0 = minimum[0] * voxelSizeM;
-  const x1 = maximum[0] * voxelSizeM;
-  const y0 = minimum[1] * voxelSizeM;
-  const y1 = maximum[1] * voxelSizeM;
-  const z0 = minimum[2] * voxelSizeM;
-  const z1 = maximum[2] * voxelSizeM;
-  const xCenter = (x0 + x1) / 2;
-  const yCenter = (y0 + y1) / 2;
-  const width = x1 - x0;
-  const depth = y1 - y0;
-  const height = z1 - z0;
-  const facades = ['#556d86', '#536f82', '#61778b', '#526b7b'];
-  const windows = ['#83bdd4', '#7cc9d4', '#99bfd8', '#7ac5e0'];
-  const facade = facades[index % facades.length];
-  const glass = windows[index % windows.length];
-  addCityBox(obstacleEntities, xCenter, yCenter, (z0 + z1) / 2,
-    width, depth, height, facade, true);
-  // Glass ribbons make the four solid blocked volumes read as 3D buildings
-  // instead of a stack of individual solid voxel cubes.
-  for (let z = z0 + 8; z < z1 - 3; z += 9) {
-    if (width > 8) {
-      addCityBox(obstacleEntities, xCenter, y0 - 0.14, z,
-        width - 5, 0.25, 2.8, glass);
-      addCityBox(obstacleEntities, xCenter, y1 + 0.14, z,
-        width - 5, 0.25, 2.8, glass);
-    }
-    if (depth > 8) {
-      addCityBox(obstacleEntities, x0 - 0.14, yCenter, z,
-        0.25, depth - 5, 2.8, glass);
-      addCityBox(obstacleEntities, x1 + 0.14, yCenter, z,
-        0.25, depth - 5, 2.8, glass);
-    }
-  }
-  // Keep roof detail inside the recorded obstacle volume.
-  addCityBox(obstacleEntities, xCenter, yCenter, z1 - 0.35,
-    width - 1.2, depth - 1.2, 0.7, '#95a7b3');
-  const corners = [[x0 + 0.4, y0 + 0.4], [x0 + 0.4, y1 - 0.4],
-    [x1 - 0.4, y0 + 0.4], [x1 - 0.4, y1 - 0.4]];
-  for (const [x, y] of corners) {
-    addCityBox(obstacleEntities, x, y, (z0 + z1) / 2,
-      0.8, 0.8, Math.max(1, height - 0.7), '#a2b5c2');
-  }
-}
-
 function renderOsmBuilding(building, index) {
   if (!Array.isArray(building.coordinates) || building.coordinates.length < 3) return;
   const hierarchy = building.coordinates.flatMap((point) => [point[0], point[1]]);
@@ -538,20 +458,8 @@ async function loadEnvironment() {
     const label = document.getElementById('osmImportStatus');
     label.textContent = 'OSM 실건물 ' + data.buildings.length + '개 · 점유 복셀 ' +
       data.blocked_voxels.length + '개 · 미등록 건물/높이 추정 주의';
-  } else if (Array.isArray(data.buildings) && data.buildings.length) {
-    renderSyntheticDistrict(data.voxel_size_m);
-    data.buildings.forEach((building, index) => {
-      renderBuildingVolume(building, index, data.voxel_size_m);
-    });
   } else {
-    // Compatible with older API servers that only provide blocked voxel lists.
-    data.blocked_voxels.forEach((point) => {
-      addCityBox(obstacleEntities,
-        (point[0] + 0.5) * data.voxel_size_m,
-        (point[1] + 0.5) * data.voxel_size_m,
-        (point[2] + 0.5) * data.voxel_size_m,
-        data.voxel_size_m, data.voxel_size_m, data.voxel_size_m, '#74899d', true);
-    });
+    throw new Error('실제 송도 OSM 건물 데이터가 준비되지 않았습니다. 가상 건물로 대체하지 않습니다.');
   }
   obstacleEntities.forEach((entity) => { entity.show = showObstaclesInput.checked; });
   obstacleCount = data.blocked_voxels.length;
