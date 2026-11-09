@@ -83,11 +83,10 @@ def join_observations(observed: dict[str, float], era5: dict) -> tuple[np.ndarra
 
 def train(X: np.ndarray, y: np.ndarray, timestamps: list[str], station: str) -> tuple[dict, dict]:
     """Chronological holdout avoids randomly mixing nearby hours across train/test."""
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.metrics import mean_absolute_error, mean_squared_error
-
     if len(y) < 100:
         raise ValueError("At least 100 paired hourly records are required")
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.metrics import mean_absolute_error, mean_squared_error
     split = int(len(y) * 0.8)
     while split < len(y) and timestamps[split - 1][:10] == timestamps[split][:10]:
         split += 1
