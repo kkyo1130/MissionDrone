@@ -754,6 +754,38 @@ document.getElementById('btnRoute').addEventListener('click', async () => {
   }
 });
 
+const historicalWeatherButton = document.getElementById('btnApplyHistoricalWeather');
+const historicalWeatherStatus = document.getElementById('historicalWeatherStatus');
+let activeWeatherProvenance = null;
+historicalWeatherButton.addEventListener('click', async () => {
+  historicalWeatherButton.disabled = true;
+  historicalWeatherStatus.textContent = '선택한 시간의 기상 데이터를 조회 중...';
+  try {
+    const at = document.getElementById('historicalWeatherAt').value;
+    if (!at) throw new Error('과거 날짜와 시간을 선택해 주세요.');
+    const source = document.getElementById('historicalWeatherSource').value;
+    // datetime-local is intentionally interpreted as UTC for reproducible historical scenarios.
+    const params = new URLSearchParams({at: at + ':00Z', source});
+    const response = await fetch('/api/weather/historical?' + params);
+    const data = await response.json();
+    if (!response.ok) throw new Error(formatApiError(data.detail));
+    windSpeedInput.value = String(data.wind_speed_mps);
+    windDirectionInput.value = String(data.wind_from_deg);
+    activeWeatherProvenance = data;
+    currentWindSpeed = data.wind_speed_mps;
+    currentWindDirection = data.wind_from_deg;
+    refreshHud();
+    await loadRiskMap();
+    historicalWeatherStatus.textContent = data.source + ' · ' + data.timestamp_utc +
+      ' · ' + data.wind_speed_mps + 'm/s, ' + data.wind_from_deg +
+      '° · 관측소/재분석 바람을 모의 위험도에 적용 (건물 사이 실측 바람 아님). 항로를 다시 생성해 주세요.';
+  } catch (error) {
+    historicalWeatherStatus.textContent = '기상 적용 실패: ' + error.message;
+  } finally {
+    historicalWeatherButton.disabled = false;
+  }
+});
+
 windSpeedInput.addEventListener('change', () => {
   const speed = Number(windSpeedInput.value);
   if (Number.isFinite(speed) && speed >= 0 && speed <= 60) {
