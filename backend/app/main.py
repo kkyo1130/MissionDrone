@@ -8,6 +8,11 @@ import hashlib
 import json
 import csv
 import io
+import re
+from math import cos, radians
+from urllib.request import Request as UrlRequest, urlopen
+from urllib.parse import urlencode
+from urllib.error import URLError
 from datetime import datetime, timezone
 
 import numpy as np
@@ -28,7 +33,7 @@ from app.core.physics import compute_risk_map
 from app.core.routing import generate_route_candidates
 from app.core.simulation import simulate_route, compare_runs
 from app.store import Store
-from app.core.voxel import BUILDING_VOLUMES, GridSpec, create_airspace_grid
+from app.core.voxel import BUILDING_VOLUMES, GridSpec, create_airspace_grid, voxelize_osm_buildings
 from app.schemas.missions import (
     DisasterMission,
     InspectionMission,
@@ -43,6 +48,8 @@ load_dotenv(REPOSITORY_ROOT / ".env")
 GRID_SPEC = GridSpec()
 OCCUPANCY = create_airspace_grid(GRID_SPEC)
 GRID_ORIGIN_WGS84 = (126.62, 37.37, 0.0)
+OSM_BUILDINGS: list[dict] = []
+ENVIRONMENT_KIND = 'synthetic_buildings'
 PointInput = Tuple[StrictInt, StrictInt, StrictInt]
 MISSIONS: Dict[str, Dict[str, Any]] = {}
 ROUTE_RESULTS: Dict[str, Dict[str, Any]] = {}
@@ -183,6 +190,100 @@ def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+class OsmEnvironmentRequest(BaseModel):
+    center_lon: float = Field(default=126.645, ge=126.60, le=126.70)
+    center_lat: float = Field(default=37.385, ge=37.34, le=37.43)
+
+
+def _osm_height(tags: dict) -> tuple[float, float, str]:
+    def metres(value):
+        if value is None:
+            return None
+        match = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(?:m)?\s*", str(value))
+        return float(match.group(1)) if match else None
+
+    height = metres(tags.get("height")) or metres(tags.get("building:height"))
+    levels = metres(tags.get("building:levels"))
+    source = "tagged_height" if height is not None else (
+        "estimated_from_levels" if levels is not None else "estimated_default"
+    )
+    if height is None:
+        height = levels * 3.2 if levels is not None else 12.0
+    minimum = metres(tags.get("min_height")) or 0.0
+    return min(300.0, max(2.0, height)), max(0.0, minimum), source
+
+
+@app.post("/api/environment/osm")
+def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
+    """Load real OSM footprints into Cesium and the same routing voxel grid."""
+    global OCCUPANCY, GRID_ORIGIN_WGS84, OSM_BUILDINGS, ENVIRONMENT_KIND
+    half_x = GRID_SPEC.width * GRID_SPEC.voxel_size_m / 2
+    half_y = GRID_SPEC.depth * GRID_SPEC.voxel_size_m / 2
+    lon_scale = 111320 * cos(radians(payload.center_lat))
+    lat_scale = 111132
+    west = payload.center_lon - half_x / lon_scale
+    east = payload.center_lon + half_x / lon_scale
+    south = payload.center_lat - half_y / lat_scale
+    north = payload.center_lat + half_y / lat_scale
+    origin = (west, south, 0.0)
+    query = (f'[out:json][timeout:30];'
+             f'(way["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f});'
+             f'relation["building"]({south:.7f},{west:.7f},{north:.7f}););out geom;')
+    req = UrlRequest(
+        "https://overpass-api.de/api/interpreter",
+        data=urlencode({"data": query}).encode("utf-8"),
+        headers={"User-Agent": "MissionDrone-University-Simulation/1.0"},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=45) as response:
+            raw = json.load(response)
+    except (URLError, TimeoutError, ValueError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=f"OSM building service unavailable: {exc}") from exc
+    buildings = []
+    for item in raw.get("elements", []):
+        if item.get("type") != "way":
+            # Relation outer rings need stitching; never use incomplete geometry.
+            continue
+        geometry = item.get("geometry")
+        if not geometry or len(geometry) < 4:
+            continue
+        coords = [[p["lon"], p["lat"]] for p in geometry]
+        if coords[0] == coords[-1]:
+            coords.pop()
+        if len(coords) < 3:
+            continue
+        tags = item.get("tags") or {}
+        height, min_height, source = _osm_height(tags)
+        buildings.append({
+            "id": f'osm-way-{item["id"]}',
+            "name": tags.get("name", f'OSM 건물 {item["id"]}'),
+            "coordinates": coords,
+            "height_m": height,
+            "min_height_m": min_height,
+            "height_source": source,
+        })
+    if not buildings:
+        raise HTTPException(status_code=422, detail="No usable OSM building footprints in selected area")
+    new_grid = voxelize_osm_buildings(GRID_SPEC, origin, buildings)
+    if not np.any(new_grid == 0):
+        raise HTTPException(status_code=422, detail="OSM buildings do not intersect the selected voxel grid")
+    OCCUPANCY = new_grid
+    GRID_ORIGIN_WGS84 = origin
+    OSM_BUILDINGS = buildings
+    ENVIRONMENT_KIND = "osm_buildings"
+    MISSIONS.clear()
+    ROUTE_RESULTS.clear()
+    return {
+        "environment_kind": ENVIRONMENT_KIND,
+        "buildings_count": len(buildings),
+        "blocked_voxels_count": int(np.count_nonzero(new_grid == 0)),
+        "origin_wgs84": list(origin),
+        "height_estimates": sum(b["height_source"] != "tagged_height" for b in buildings),
+        "notice": "OSM can be incomplete; estimated heights are not surveyed. Simulation only.",
+    }
+
+
 @app.get("/api/environment")
 def environment_api() -> Dict[str, Any]:
     blocked_voxels = np.argwhere(OCCUPANCY == 0)
@@ -190,7 +291,7 @@ def environment_api() -> Dict[str, Any]:
         "grid_shape": list(OCCUPANCY.shape),
         "voxel_size_m": GRID_SPEC.voxel_size_m,
         "blocked_voxels": blocked_voxels.tolist(),
-        "buildings": [
+        "buildings": OSM_BUILDINGS if ENVIRONMENT_KIND == "osm_buildings" else [
             {
                 "id": building["id"],
                 "name": building["name"],
@@ -199,7 +300,8 @@ def environment_api() -> Dict[str, Any]:
             }
             for building in BUILDING_VOLUMES
         ],
-        "environment_kind": "synthetic_buildings",
+        "environment_kind": ENVIRONMENT_KIND,
+        "origin_wgs84": list(GRID_ORIGIN_WGS84),
     }
 
 
