@@ -123,7 +123,7 @@ def main() -> None:
     parser.add_argument("--longitude", required=True, type=float)
     parser.add_argument("--start", required=True, help="YYYY-MM-DD")
     parser.add_argument("--end", required=True, help="YYYY-MM-DD")
-    parser.add_argument("--output", default="models/wind_corrector.pkl")
+    parser.add_argument("--output", default=str(Path(__file__).resolve().parents[3] / "models" / "wind_corrector.pkl"))
     args = parser.parse_args()
     raw = fetch_text(args.noaa_csv) if args.noaa_csv.startswith(("https://", "http://")) else Path(args.noaa_csv).read_text(encoding="utf-8-sig")
     observed = parse_noaa_csv(raw)
