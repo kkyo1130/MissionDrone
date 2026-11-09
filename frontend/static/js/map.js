@@ -400,21 +400,22 @@ function renderSyntheticDistrict(voxelSizeM) {
   cityGroundEntities = [];
   const width = gridSpec.shape[0] * voxelSizeM;
   const depth = gridSpec.shape[1] * voxelSizeM;
-  // Street and terrain decorations are below flyable z=0 and do not
-  // introduce unmodeled physical obstacles into route collision checks.
-  addCityBox(cityGroundEntities, width / 2, depth / 2, -0.55,
-    width, depth, 1, '#25434c');
+  // Decorative ground surfaces sit just above the Cesium ellipsoid so
+  // they are visible; they stay well below the first flyable voxel center
+  // (5 m), and are not treated as pathfinding obstacles.
+  addCityBox(cityGroundEntities, width / 2, depth / 2, 0.18,
+    width, depth, 0.3, '#25434c');
   const streetColor = '#3b5262';
   const markingsColor = '#99b1bd';
   const horizontalStreetY = 14 * voxelSizeM;
-  addCityBox(cityGroundEntities, width / 2, horizontalStreetY, -0.04,
+  addCityBox(cityGroundEntities, width / 2, horizontalStreetY, 0.37,
     width, voxelSizeM * 0.9, 0.06, streetColor);
   for (const x of [3, 29]) {
-    addCityBox(cityGroundEntities, x * voxelSizeM, depth / 2, -0.04,
+    addCityBox(cityGroundEntities, x * voxelSizeM, depth / 2, 0.37,
       voxelSizeM * 0.8, depth, 0.06, streetColor);
   }
   for (let x = voxelSizeM * 1.5; x < width - voxelSizeM; x += voxelSizeM * 2.5) {
-    addCityBox(cityGroundEntities, x, horizontalStreetY, 0.005,
+    addCityBox(cityGroundEntities, x, horizontalStreetY, 0.43,
       voxelSizeM * 0.95, 0.2, 0.025, markingsColor);
   }
 }
