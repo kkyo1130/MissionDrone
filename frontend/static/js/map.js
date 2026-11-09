@@ -662,7 +662,14 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(formatApiError(result.detail));
-    candidateRoutes = result.routes;
+    candidateRoutes = result.routes || [];
+    if (!candidateRoutes.length) {
+      candidateSelect.innerHTML = '<option value="">생성 가능한 항로 없음</option>';
+      candidateSelect.disabled = true;
+      experimentButton.disabled = true;
+      candidateSummary.textContent = `생성 가능한 후보가 없습니다. ${result.reason || '임무 좌표, 안전거리, 고도, 상승률, 배터리 조건을 확인해 주세요.'}`;
+      return;
+    }
     candidateSelect.innerHTML = '';
     candidateRoutes.forEach((route, index) => {
       const option = document.createElement('option');
@@ -676,6 +683,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
     if (candidateRoutes.length) candidateSelect.dispatchEvent(new Event('change'));
   } catch (error) {
     candidateSummary.textContent = `후보 생성 실패: ${error.message}`;
+    console.error('Candidate route generation failed', error);
   } finally {
     button.disabled = false;
   }
