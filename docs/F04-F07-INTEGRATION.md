@@ -13,12 +13,12 @@ Source: PR #2 (`feat/F03-backend-p0`). Target: current `main` (F00–F03 integra
 
 ## Integration checkpoints
 
-- [ ] F04 simulation adapter implemented and tested
-- [ ] F05 evaluation/recommendation API implemented and tested
-- [ ] F07 persistence, schema migration, replay/export implemented and tested
-- [ ] F00–F03 regression tests pass
+- [x] F04 synthetic wind simulation adapter implemented (test execution pending)
+- [x] F05 safety-first evaluation/recommendation API implemented (test execution pending)
+- [ ] F07 SQLAlchemy persistence, replay/export implemented; migration strategy and tests pending
+- [ ] F00–F03 regression tests pass (CI workflow added; no run recorded)
 - [ ] SQLite and MySQL integration tests pass
 - [ ] Cesium frontend/API smoke test passes
 - [ ] Merge integration PR to main; only then close superseded PR #2
 
-PR #2's reported tests were run on its own independent backend, not on the combined main codebase. This branch starts with integration decisions; it does **not** claim F04–F07 are implemented yet.
+PR #2's reported tests were run on its own independent backend, not on the combined main codebase. This branch contains F04/F05/F07 initial implementation and tests. Tests have not yet run in a verified environment; schema migrations, MySQL and frontend smoke testing remain outstanding. Keep PR in draft until all gates pass.
