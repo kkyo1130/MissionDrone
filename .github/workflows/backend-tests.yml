@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/F04-F07-backend-integration
+      - main
   pull_request:
     branches:
       - main
