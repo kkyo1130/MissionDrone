@@ -186,6 +186,12 @@
       .hud-bottom-note{bottom:65px}
       @media(max-width:760px){.hud-weather{left:12px;top:69px;min-width:0}.hud-legend{left:12px;bottom:12px;width:175px;padding:10px}.hud-metrics{right:12px;bottom:12px;width:190px;padding:10px}.mission-choice{font-size:.7rem;padding:7px 6px;gap:5px}.mission-choice-icon{width:22px;height:22px}.mission-metric{padding:8px}.mission-metric p{font-size:.61rem}.hud-bottom-note,.route-caption{display:none}}
       @media(max-width:420px){.hud-legend{width:145px}.hud-metrics{width:158px}.mission-choice small{display:none}.mission-metric .metric-head{font-size:.67rem}.mission-metric .metric-head strong{font-size:.57rem}}
+
+      .playback-controls{position:absolute;z-index:35;left:50%;top:84px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;background:#0a1b39ed;border:1px solid #3b5781;border-radius:12px;padding:8px;box-shadow:0 12px 30px #0005;white-space:nowrap}
+      .playback-controls button{width:auto;padding:9px 11px;background:#193b6c;border:1px solid #365d94;border-radius:8px;color:#edf5ff;font-size:.78rem;cursor:pointer}
+      .playback-controls button:disabled{opacity:.4;cursor:not-allowed}
+      #playbackProgress{font-size:.74rem;color:#a8c7f1;padding:0 7px}
+      @media(max-width:760px){.playback-controls{top:130px;left:50%;max-width:calc(100vw - 16px);gap:3px;padding:5px}.playback-controls button{font-size:.66rem;padding:6px}#playbackProgress{font-size:.63rem}}
     </style>
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
@@ -322,7 +328,12 @@
         <button id="btnCreateMission" type="submit">임무 저장</button>
         <div id="missionStatus" role="status" aria-live="polite"></div>
         </form>
-        <button id="btnRoute" type="button">Find Route</button>
+        <button id="btnRoute" type="button">Find Route (빠른 항로)</button>
+        <button id="btnCandidates" type="button" class="secondary">후보 항로 3~5개 생성</button>
+        <div class="group"><label for="candidateSelect">후보 항로 선택</label><select id="candidateSelect" disabled><option value="">임무 저장 후 후보 생성</option></select></div>
+        <div id="candidateSummary" class="mission-help" role="status"></div>
+        <button id="btnExperiment" type="button" class="secondary" disabled>기상 조건별 반복 시뮬레이션</button>
+        <div id="experimentSummary" class="mission-help" role="status"></div>
         <button id="btnRisk" class="secondary" type="button">Load Risk Voxels</button>
         <h2>지도 레이어</h2>
         <label class="layer-control">
@@ -353,6 +364,12 @@
       </div>
       <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
       <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
+      <div class="playback-controls" aria-label="드론 경로 재생 제어">
+        <button id="btnReplay" type="button" disabled>↻ 다시보기</button>
+        <button id="btnPause" type="button" disabled>Ⅱ 일시정지</button>
+        <button id="btnFocus" type="button">⌖ 도시 확대</button>
+        <span id="playbackProgress" role="status">재생 대기</span>
+      </div>
       <div class="route-caption" id="routeCaption" role="status">항로 탐색 대기</div>
       <div class="hud-bottom-note">합성 도시 · 모의 위험도 · 실제 비행 안전성을 보장하지 않습니다</div>
     </main>
