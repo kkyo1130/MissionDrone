@@ -1,24 +1,31 @@
-# F04–F07 backend integration plan
+# F04–F07 backend integration status
 
-Source: PR #2 (`feat/F03-backend-p0`). Target: current `main` (F00–F03 integrated via #3, #4, #8).
+Source: PR #2 (`feat/F03-backend-p0`). Integration target: canonical `main` with F00–F03 already merged (#3, #4, #8).
 
 ## Compatibility decisions
 
-1. Keep `backend/app/main.py` and `backend/app/schemas/missions.py` as canonical API. Existing mission requests use `mission_type`, `start`/`end` voxel indices and nested `constraints`; PR #2 uses `kind`, `start`/`goal` local-meter Point objects and flattened constraints. Do not overwrite the canonical endpoints.
-2. Keep `backend/app/core/routing.py` as the route generator; its output includes `points` (voxel indices), `coordinates[].enu_m`, `distance_m`, `estimated_time_s`, `estimated_energy_wh`, and `risk_exposure`. Convert to meter-based ENU only at the simulation boundary.
-3. F04: extract PR #2's wind simulation (crosswind, groundspeed, climb rate, energy, risk and budget checks) into a separate module and adapt it to the canonical mission and route models. Retain explicit synthetic-data caveat and deterministic seeds.
-4. F05: extract PR #2's safety-first evaluation and ranking; reject candidates failing any selected weather run. Use the existing mission weights or document any deliberate override. Return no recommendation if all candidates fail.
-5. F07: port `backend/app/store.py` with SQLAlchemy models and transaction boundaries. Preserve current endpoint contracts; add database-backed persistence via an explicit migration strategy, not by replacing the existing FastAPI app factory. Use SQLite for unit tests and MySQL for integration tests.
-6. F08: add regression tests covering F00–F03 APIs, multiple wind scenarios, repeatability, no-safe-route behavior, persistent storage, replay, and JSON/CSV exports.
+1. Preserve `app/main.py`, `app/schemas/missions.py`, and the `mission_type` / voxel point / nested constraints API contract.
+2. Preserve the F03 candidate-route generator and transform `coordinates[].enu_m` into meter-based simulation inputs.
+3. F04: simulate synthetic winds with deterministic seeds; results are **not flight-safety validated**.
+4. F05: rank routes only when every selected scenario/repeat passes constraints; return no recommendation if none qualify.
+5. F07: SQLAlchemy-backed mission, route, and experiment records, with replay and JSON/CSV export. Tables currently use `Base.metadata.create_all()`; a versioned schema migration strategy (e.g. Alembic) remains future work.
+6. F08: preserve F00–F03 regression coverage and add SQLite integration tests.
 
-## Integration checkpoints
+## Verified checkpoints
 
-- [x] F04 synthetic wind simulation adapter implemented (test execution pending)
-- [x] F05 safety-first evaluation/recommendation API implemented (test execution pending)
-- [ ] F07 SQLAlchemy persistence, replay/export implemented; migration strategy and tests pending
-- [ ] F00–F03 regression tests pass (CI workflow added; no run recorded)
-- [ ] SQLite and MySQL integration tests pass
-- [ ] Cesium frontend/API smoke test passes
-- [ ] Merge integration PR to main; only then close superseded PR #2
+- [x] F04 synthetic wind simulation integrated
+- [x] F05 safety-first route comparison/recommendation integrated
+- [x] F07 MySQL/SQLite persistence, deterministic replay, JSON/CSV export implemented
+- [x] GitHub Actions pull-request regression/integration job passed on commit `4b94750fa03393c561a9699db8f3b59fc8635454` (SQLite)
+- [x] User's local backend pytest: 20 passed (reported)
+- [x] User's local MySQL 8.4 Docker connection and table initialization succeeded (reported)
+- [x] User's local MySQL E2E created a mission, three routes, six simulation runs; records were subsequently readable (reported)
+- [x] User's replay endpoint returned `matches=true` and CSV export returned 200 (reported)
+- [ ] One strict API response-equality assertion in the user's custom MySQL E2E failed; exact differing field remains undiagnosed. The later database existence/replay checks do not resolve this assertion.
+- [ ] Automated MySQL-backed integration tests in CI
+- [ ] Versioned schema migrations
+- [ ] Cesium frontend/API smoke test verified on merged `main`
 
-PR #2's reported tests were run on its own independent backend, not on the combined main codebase. This branch contains F04/F05/F07 initial implementation and tests. Tests have not yet run in a verified environment; schema migrations, MySQL and frontend smoke testing remain outstanding. Keep PR in draft until all gates pass.
+## Notes
+
+This integration preserves the existing F00–F03 behavior instead of directly merging overlapping PR #2. Current weather, energy, and risk calculations use synthetic models and do not guarantee real-world flight safety.
