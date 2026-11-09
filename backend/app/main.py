@@ -20,6 +20,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, StrictInt, TypeAdapter
 from starlette.requests import Request
 
+from app.ai.api import router as ai_router
 from app.core.llm import get_risk_alpha
 from app.core.pathfinding import find_path_astar
 from app.core.physics import compute_risk_map
@@ -67,6 +68,7 @@ class ExperimentRequest(BaseModel):
 
 
 app = FastAPI(title="MissionDrone API", version="0.1.0")
+app.include_router(ai_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
