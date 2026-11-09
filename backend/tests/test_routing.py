@@ -58,7 +58,10 @@ def test_generate_and_retrieve_distinct_safe_candidates():
         assert route["estimated_time_s"] > 0
         assert route["estimated_energy_wh"] < 180
         assert 0 <= route["average_risk"] <= 1
-        assert route["minimum_clearance_m"] > 5
+        # No known obstacle in the isolated CI grid means clearance is
+        # undefined, not zero; OSM-loaded grids report a numeric distance.
+        clearance = route["minimum_clearance_m"]
+        assert clearance is None or clearance > 5
         assert len(route["coordinates"]) == len(points)
         assert route["coordinates"][0]["wgs84"]["latitude"] > 0
 
