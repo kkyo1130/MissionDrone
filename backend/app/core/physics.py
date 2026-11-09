@@ -34,10 +34,11 @@ def compute_risk_map(
     )
     direction_field = np.repeat(direction_field[:, :, None], nz, axis=2)
 
-    speed_scale = min(max(wind_speed / 20.0, 0.0), 2.0)
-    raw_risk = (0.65 * venturi + 0.35 * direction_field) * speed_scale
-    raw_risk *= free
-
-    # Fixed-scale normalization: normalizing by each map's maximum would
-    # cancel speed_scale and make 2 m/s and 20 m/s look equally risky.
-    return np.clip(raw_risk, 0.0, 1.0)
+    spatial_risk = (0.65 * venturi + 0.35 * direction_field) * free
+    maximum = float(spatial_risk.max())
+    if maximum <= 1e-8:
+        return spatial_risk
+    # Normalize the spatial pattern only; scale by an absolute 8 m/s reference.
+    # This preserves the legacy risk map at 8 m/s without cancelling wind speed.
+    speed_factor = max(0.0, wind_speed) / 8.0
+    return np.clip((spatial_risk / maximum) * speed_factor, 0.0, 1.0)
