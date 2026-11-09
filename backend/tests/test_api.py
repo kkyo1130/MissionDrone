@@ -37,25 +37,26 @@ def test_environment_returns_blocked_voxel_map():
     assert result["blocked_voxels"] == np.argwhere(OCCUPANCY == 0).tolist()
 
 
-def test_3d_building_bounds_match_collision_grid():
-    """Cesium building bounds and A* obstacles must describe one city."""
-    result = client.get("/api/environment").json()
-    buildings = result["buildings"]
-    assert result["environment_kind"] == "synthetic_buildings"
-    assert len(buildings) == 4
+def test_osm_building_footprints_match_voxel_grid(monkeypatch):
+    """Use a deterministic OSM fixture; no live Overpass dependency in tests."""
+    from app import main as module
+    from app.core.voxel import voxelize_osm_buildings
 
-    rendered_occupancy = np.ones_like(OCCUPANCY)
-    for building in buildings:
-        lower, upper = building["min"], building["max"]
-        assert all(0 <= a < b <= size for a, b, size
-                   in zip(lower, upper, OCCUPANCY.shape))
-        rendered_occupancy[
-            lower[0]:upper[0],
-            lower[1]:upper[1],
-            lower[2]:upper[2],
-        ] = 0
-    np.testing.assert_array_equal(rendered_occupancy, OCCUPANCY)
-
+    origin = (126.645, 37.385, 0.0)
+    dx = 10 / (111320 * np.cos(np.radians(origin[1])))
+    dy = 10 / 111132
+    building = {
+        "coordinates": [[origin[0], origin[1]],
+                        [origin[0] + dx, origin[1]],
+                        [origin[0] + dx, origin[1] + dy],
+                        [origin[0], origin[1] + dy]],
+        "height_m": 25.0, "min_height_m": 0.0,
+    }
+    grid = voxelize_osm_buildings(module.GRID_SPEC, origin, [building])
+    assert grid[0, 0, 0] == 0
+    assert grid[0, 0, 2] == 0
+    assert grid[0, 0, 3] == 1
+    assert grid[3, 3, 0] == 1
 
 
 def test_risk_map_returns_voxel_units_and_free_points():
