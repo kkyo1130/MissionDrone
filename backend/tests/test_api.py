@@ -86,12 +86,18 @@ def test_route_returns_valid_path():
     assert all(OCCUPANCY[tuple(point)] == 1 for point in result["path"])
 
 
-def test_route_rejects_invalid_or_blocked_points():
+def test_route_rejects_invalid_or_blocked_points(monkeypatch):
     out_of_bounds = client.post(
         "/api/route", json={"start": [32, 0, 0], "end": [28, 28, 6]}
     )
     assert out_of_bounds.status_code == 422
 
+    # Deterministic fixture: an explicitly occupied voxel, independent of
+    # the OSM network response or the selected Songdo study area.
+    from app import main as module
+    occupied_grid = module.OCCUPANCY.copy()
+    occupied_grid[6, 6, 0] = 0
+    monkeypatch.setattr(module, "OCCUPANCY", occupied_grid)
     blocked = client.post(
         "/api/route", json={"start": [6, 6, 0], "end": [28, 28, 6]}
     )
