@@ -63,18 +63,55 @@ const viewer = new Cesium.Viewer('viewer', {
 });
 
 viewer.scene.globe.depthTestAgainstTerrain = false;
-viewer.camera.flyTo({
-  destination: Cesium.Cartesian3.fromDegrees(
-    gridOriginWgs84[0],
-    gridOriginWgs84[1],
-    3000,
-  ),
-  duration: 0,
-});
+// Frame the actual simulated city instead of viewing it from 3 km away.
+const cityCenterLocal = new Cesium.Cartesian3(
+  gridSpec.shape[0] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[1] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[2] * gridSpec.voxelSizeM / 3,
+);
+const cityOrigin = Cesium.Cartesian3.fromDegrees(...gridOriginWgs84);
+const cityTransform = Cesium.Transforms.eastNorthUpToFixedFrame(cityOrigin);
+const cityCenter = Cesium.Matrix4.multiplyByPoint(cityTransform, cityCenterLocal, new Cesium.Cartesian3());
+const cityRadius = Math.hypot(
+  gridSpec.shape[0] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[1] * gridSpec.voxelSizeM / 2,
+  gridSpec.shape[2] * gridSpec.voxelSizeM / 2,
+);
+const cityBounds = new Cesium.BoundingSphere(cityCenter, cityRadius);
+function focusCity() {
+  viewer.camera.flyToBoundingSphere(cityBounds, {
+    duration: 0.8,
+    offset: new Cesium.HeadingPitchRange(-0.8, -0.65, cityRadius * 2.15),
+  });
+}
+focusCity();
+document.getElementById('btnFocus').addEventListener('click', focusCity);
 
 const origin = Cesium.Cartesian3.fromDegrees(...gridOriginWgs84);
 const enuToFixed = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
 let routeEntity = null;
+let currentMissionId = null;
+let candidateRoutes = [];
+const candidateSelect = document.getElementById('candidateSelect');
+const candidateSummary = document.getElementById('candidateSummary');
+const experimentSummary = document.getElementById('experimentSummary');
+const experimentButton = document.getElementById('btnExperiment');
+function showRoutePositions(points, detail, risk) {
+  if (routeEntity) viewer.entities.remove(routeEntity);
+  const positions = points.map((point) => voxelToCartesian(point));
+  routeEntity = viewer.entities.add({
+    polyline: { positions, width: 6, material: Cesium.Color.fromCssColorString('#ffbd18') },
+  });
+  startRoutePlayback(positions);
+  focusCity();
+  document.body.classList.remove('settings-open');
+  settingsToggle.setAttribute('aria-expanded', 'false');
+  settingsToggle.textContent = '⚙ 임무 설정';
+  const type = missionTypeInput.value;
+  setHudText(type + 'Badge', '항로 생성');
+  setHudText(type + 'Detail', detail);
+  setHudWidth(type + 'Bar', Number.isFinite(risk) ? Math.max(4, (1 - risk) * 100) : 0);
+}
 let obstacleEntities = [];
 let riskEntities = [];
 let obstacleCount = 0;
@@ -331,11 +368,38 @@ let routeMarkers = [];
 let droneParts = [];
 let playbackListener = null;
 let playbackStartedAt = 0;
+let playbackFrame = null;
+let playbackElapsed = 0;
+let playbackLastFrame = 0;
+let playbackCenter = null;
+let playbackPositions = null;
+let playbackFinished = false;
+let playbackPaused = false;
+const replayButton = document.getElementById('btnReplay');
+const pauseButton = document.getElementById('btnPause');
+const playbackProgress = document.getElementById('playbackProgress');
+function setPlaybackControls(enabled) {
+  replayButton.disabled = !enabled;
+  pauseButton.disabled = !enabled;
+}
+pauseButton.addEventListener('click', () => {
+  if (!playbackPositions || playbackFinished) return;
+  playbackPaused = !playbackPaused;
+  playbackLastFrame = performance.now();
+  pauseButton.textContent = playbackPaused ? '▶ 계속 재생' : 'Ⅱ 일시정지';
+});
+replayButton.addEventListener('click', () => {
+  if (playbackPositions) startRoutePlayback(playbackPositions);
+});
 const playbackDurationSeconds = 18;
 const droneBodyColor = Cesium.Color.fromCssColorString('#e9f5ff');
 const droneAccentColor = Cesium.Color.fromCssColorString('#3f99ff');
 
 function clearRoutePlayback() {
+  if (playbackFrame !== null) {
+    cancelAnimationFrame(playbackFrame);
+    playbackFrame = null;
+  }
   if (playbackListener) {
     viewer.clock.onTick.removeEventListener(playbackListener);
     playbackListener = null;
@@ -408,6 +472,14 @@ function makeDrone(positionProperty) {
 function startRoutePlayback(positions) {
   clearRoutePlayback();
   if (!positions.length) return;
+  playbackPositions = positions.slice();
+  playbackFinished = false;
+  playbackPaused = false;
+  playbackElapsed = 0;
+  playbackLastFrame = performance.now();
+  setPlaybackControls(true);
+  pauseButton.textContent = 'Ⅱ 일시정지';
+  playbackProgress.textContent = '0%';
   if (positions.length === 1) positions = [positions[0], positions[0]];
   addRoutePin(positions[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
   addRoutePin(positions[positions.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
@@ -418,29 +490,34 @@ function startRoutePlayback(positions) {
     distances.push(distances[i - 1] + Cesium.Cartesian3.distance(positions[i - 1], positions[i]));
   }
   const totalDistance = distances[distances.length - 1];
-  const currentPosition = new Cesium.Cartesian3();
-  const dronePosition = new Cesium.CallbackPositionProperty((time, result) => {
-    const elapsed = Math.max(0, Cesium.JulianDate.secondsDifference(time, playbackStartedAt));
-    const target = Math.min(1, elapsed / playbackDurationSeconds) * totalDistance;
+  playbackCenter = Cesium.Cartesian3.clone(positions[0]);
+  const dronePosition = new Cesium.CallbackPositionProperty(
+    (_time, result) => Cesium.Cartesian3.clone(playbackCenter, result), false
+  );
+  makeDrone(dronePosition);
+  setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
+  function frame(now) {
+    if (!playbackPaused) playbackElapsed += Math.max(0, Math.min(0.1, (now - playbackLastFrame) / 1000));
+    playbackLastFrame = now;
+    const fraction = Math.min(1, playbackElapsed / playbackDurationSeconds);
+    const target = fraction * totalDistance;
     let index = 1;
     while (index < distances.length - 1 && distances[index] < target) index++;
     const segment = distances[index] - distances[index - 1];
     const ratio = segment > 0 ? (target - distances[index - 1]) / segment : 0;
-    return Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, result || currentPosition);
-  }, false);
-  playbackStartedAt = Cesium.JulianDate.clone(viewer.clock.currentTime);
-  viewer.clock.shouldAnimate = true;
-  makeDrone(dronePosition);
-  setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
-  playbackListener = (clock) => {
-    const elapsed = Cesium.JulianDate.secondsDifference(clock.currentTime, playbackStartedAt);
-    if (elapsed >= playbackDurationSeconds) {
-      viewer.clock.onTick.removeEventListener(playbackListener);
-      playbackListener = null;
+    Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, playbackCenter);
+    playbackProgress.textContent = `${Math.round(fraction * 100)}%`;
+    viewer.scene.requestRender();
+    if (fraction >= 1) {
+      playbackFinished = true;
+      pauseButton.disabled = true;
+      playbackFrame = null;
       setHudText('routeCaption', '도착 지점 도달 · 모의 비행 완료');
+      return;
     }
-  };
-  viewer.clock.onTick.addEventListener(playbackListener);
+    playbackFrame = requestAnimationFrame(frame);
+  }
+  playbackFrame = requestAnimationFrame(frame);
 }
 
 async function findRoute() {
@@ -472,27 +549,7 @@ async function findRoute() {
     throw new Error(data.detail || 'Route API 요청 실패');
   }
 
-  if (routeEntity) {
-    viewer.entities.remove(routeEntity);
-  }
-  const positions = data.path.map((point) => voxelToCartesian(point));
-  routeEntity = viewer.entities.add({
-    polyline: {
-      positions,
-      width: 5,
-      material: Cesium.Color.fromCssColorString('#ffbd18'),
-    },
-  });
-
-  startRoutePlayback(positions);
-  viewer.zoomTo(routeEntity);
-  const type = missionTypeInput.value;
-  const label = { inspection: '시설 점검', disaster: '재난 대응', delivery: '물류 배송' }[type];
-  const detail = `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`;
-  setHudText(type + 'Badge', '탐색 완료');
-  setHudText(type + 'Detail', detail);
-  setHudWidth(type + 'Bar', Math.max(4, (1 - data.average_risk) * 100));
-  // The playback status is maintained by the Cesium clock listener.
+  showRoutePositions(data.path, `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`, data.average_risk);
   statusEl.textContent = `Path length=${data.path_length}, avg risk=${data.average_risk.toFixed(3)}, alpha=${data.alpha.toFixed(2)}`;
 }
 
@@ -572,6 +629,11 @@ missionForm.addEventListener('submit', async (event) => {
       throw new Error(formatApiError(data.detail));
     }
 
+    currentMissionId = data.id;
+    candidateRoutes = [];
+    candidateSelect.innerHTML = '<option value="">후보 항로 생성 필요</option>';
+    candidateSelect.disabled = true;
+    experimentButton.disabled = true;
     startInput.value = data.start.join(',');
     endInput.value = data.end.join(',');
     missionStatusEl.textContent = `임무 저장 완료 · ${data.name} · ID ${data.id} (DB 저장)`;
@@ -592,6 +654,96 @@ showRiskInput.addEventListener('change', () => {
   riskEntities.forEach((entity) => {
     entity.show = showRiskInput.checked;
   });
+});
+
+
+document.getElementById('btnCandidates').addEventListener('click', async () => {
+  if (!currentMissionId) {
+    candidateSummary.textContent = '먼저 임무를 저장해 주세요.';
+    return;
+  }
+  const button = document.getElementById('btnCandidates');
+  button.disabled = true;
+  candidateSummary.textContent = '임무 조건에 따른 후보 항로 생성 중...';
+  try {
+    const response = await fetch(`/api/missions/${currentMissionId}/routes`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        count: 3,
+        wind_speed: Number(windSpeedInput.value),
+        wind_direction: Number(windDirectionInput.value),
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(formatApiError(result.detail));
+    candidateRoutes = result.routes || [];
+    if (!candidateRoutes.length) {
+      candidateSelect.innerHTML = '<option value="">생성 가능한 항로 없음</option>';
+      candidateSelect.disabled = true;
+      experimentButton.disabled = true;
+      candidateSummary.textContent = `생성 가능한 후보가 없습니다. ${result.reason || '임무 좌표, 안전거리, 고도, 상승률, 배터리 조건을 확인해 주세요.'}`;
+      return;
+    }
+    candidateSelect.innerHTML = '';
+    candidateRoutes.forEach((route, index) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = `후보 ${index + 1} · ${route.distance_m.toFixed(0)}m · 위험 ${route.average_risk.toFixed(2)} · ${route.estimated_energy_wh.toFixed(1)}Wh`;
+      candidateSelect.appendChild(option);
+    });
+    candidateSelect.disabled = !candidateRoutes.length;
+    experimentButton.disabled = !candidateRoutes.length;
+    candidateSummary.textContent = `${result.generated_count}개 생성 · ${result.reason || '후보를 선택해 비행을 재생하세요.'}`;
+    if (candidateRoutes.length) candidateSelect.dispatchEvent(new Event('change'));
+  } catch (error) {
+    candidateSummary.textContent = `후보 생성 실패: ${error.message}`;
+    console.error('Candidate route generation failed', error);
+  } finally {
+    button.disabled = false;
+  }
+});
+candidateSelect.addEventListener('change', () => {
+  const route = candidateRoutes[Number(candidateSelect.value)];
+  if (!route) return;
+  showRoutePositions(route.points, `후보 항로 · ${route.distance_m.toFixed(0)}m · ${route.estimated_time_s.toFixed(0)}초 · ${route.estimated_energy_wh.toFixed(1)}Wh`, route.average_risk);
+});
+experimentButton.addEventListener('click', async () => {
+  if (!currentMissionId || !candidateRoutes.length) return;
+  experimentButton.disabled = true;
+  experimentSummary.textContent = '약풍·중풍·강풍 시나리오를 반복 시뮬레이션하는 중...';
+  try {
+    const response = await fetch(`/api/missions/${currentMissionId}/experiments`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        weather: [
+          {name:'약풍',wind_speed_mps:2,wind_from_deg:90},
+          {name:'중풍',wind_speed_mps:8,wind_from_deg:90},
+          {name:'강풍',wind_speed_mps:15,wind_from_deg:90},
+        ],
+        repeats: 2, seed: 42,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(formatApiError(result.detail));
+    const recommended = result.evaluation?.recommended_route_id;
+    const index = candidateRoutes.findIndex((route) => route.id === recommended);
+    if (index >= 0) {
+      candidateSelect.value = String(index);
+      candidateSelect.dispatchEvent(new Event('change'));
+    }
+    experimentSummary.innerHTML = '';
+    const message = document.createElement('div');
+    message.textContent = `${result.runs.length}회 모의 비행 저장 · ${recommended ? '안전 조건을 통과한 추천 후보 표시' : '안전 조건을 만족하는 추천 항로 없음'}`;
+    const exportLink = document.createElement('a');
+    exportLink.href = `/api/experiments/${encodeURIComponent(result.id)}/export?format=csv`;
+    exportLink.textContent = ' · CSV 데이터 다운로드';
+    exportLink.style.color = '#91c2ff';
+    experimentSummary.append(message, exportLink);
+  } catch (error) {
+    experimentSummary.textContent = `시뮬레이션 실패: ${error.message}`;
+  } finally {
+    experimentButton.disabled = false;
+  }
 });
 
 document.getElementById('btnRoute').addEventListener('click', async () => {
