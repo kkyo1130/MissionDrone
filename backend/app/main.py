@@ -33,7 +33,7 @@ from app.core.physics import compute_risk_map
 from app.core.routing import generate_route_candidates
 from app.core.simulation import simulate_route, compare_runs
 from app.store import Store
-from app.core.voxel import BUILDING_VOLUMES, GridSpec, create_airspace_grid, voxelize_osm_buildings
+from app.core.voxel import GridSpec, voxelize_osm_buildings
 from app.schemas.missions import (
     DisasterMission,
     InspectionMission,
@@ -46,10 +46,10 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPOSITORY_ROOT / ".env")
 
 GRID_SPEC = GridSpec()
-OCCUPANCY = create_airspace_grid(GRID_SPEC)
-GRID_ORIGIN_WGS84 = (126.62, 37.37, 0.0)
+OCCUPANCY = np.ones((GRID_SPEC.width, GRID_SPEC.depth, GRID_SPEC.height), dtype=np.int8)
+GRID_ORIGIN_WGS84 = (126.6432, 37.3836, 0.0)
 OSM_BUILDINGS: list[dict] = []
-ENVIRONMENT_KIND = 'synthetic_buildings'
+ENVIRONMENT_KIND = 'osm_unavailable'
 PointInput = Tuple[StrictInt, StrictInt, StrictInt]
 MISSIONS: Dict[str, Dict[str, Any]] = {}
 ROUTE_RESULTS: Dict[str, Dict[str, Any]] = {}
@@ -284,6 +284,19 @@ def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
     }
 
 
+@app.on_event("startup")
+def initialize_osm_city() -> None:
+    """Never show mock buildings: initialize the real OSM city on startup.
+
+    If the public provider is unavailable, startup fails visibly instead of
+    silently planning flights through an empty or synthetic city.
+    """
+    load_osm_environment(OsmEnvironmentRequest(
+        center_lon=float(os.getenv("OSM_CENTER_LON", "126.645")),
+        center_lat=float(os.getenv("OSM_CENTER_LAT", "37.385")),
+    ))
+
+
 @app.get("/api/environment")
 def environment_api() -> Dict[str, Any]:
     blocked_voxels = np.argwhere(OCCUPANCY == 0)
@@ -291,15 +304,7 @@ def environment_api() -> Dict[str, Any]:
         "grid_shape": list(OCCUPANCY.shape),
         "voxel_size_m": GRID_SPEC.voxel_size_m,
         "blocked_voxels": blocked_voxels.tolist(),
-        "buildings": OSM_BUILDINGS if ENVIRONMENT_KIND == "osm_buildings" else [
-            {
-                "id": building["id"],
-                "name": building["name"],
-                "min": list(building["min"]),
-                "max": list(building["max"]),
-            }
-            for building in BUILDING_VOLUMES
-        ],
+        "buildings": OSM_BUILDINGS,
         "environment_kind": ENVIRONMENT_KIND,
         "origin_wgs84": list(GRID_ORIGIN_WGS84),
     }
