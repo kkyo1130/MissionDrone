@@ -773,11 +773,18 @@ historicalWeatherButton.addEventListener('click', async () => {
     const response = await fetch('/api/weather/historical?' + params);
     const data = await response.json();
     if (!response.ok) throw new Error(formatApiError(data.detail));
-    windSpeedInput.value = String(data.wind_speed_mps);
-    windDirectionInput.value = String(data.wind_from_deg);
+    const speed = Number(data.wind_speed_mps);
+    const direction = Number(data.wind_from_deg);
+    if (!Number.isFinite(speed) || speed < 0 || speed > 60 ||
+        !Number.isFinite(direction) || direction < 0 || direction > 360) {
+      throw new Error('기상 데이터의 풍속 또는 풍향이 지원 범위를 벗어났습니다.');
+    }
+    // Preserve observed/reanalysis precision (e.g. 2.59 m/s); never round to 0.1 m/s.
+    windSpeedInput.value = String(speed);
+    windDirectionInput.value = String(direction);
     activeWeatherProvenance = data;
-    currentWindSpeed = data.wind_speed_mps;
-    currentWindDirection = data.wind_from_deg;
+    currentWindSpeed = speed;
+    currentWindDirection = direction;
     refreshHud();
     await loadRiskMap();
     historicalWeatherStatus.textContent = data.source + ' · ' + data.timestamp_utc +
