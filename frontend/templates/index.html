@@ -380,12 +380,14 @@
       <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
       <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
       <div class="playback-controls" aria-label="드론 경로 재생 제어">
-        <button id="btnReplay" type="button" disabled>↻ 다시보기</button>
+        <button id="btnStart" type="button" disabled>▶ 출발</button>
+        <button id="btnReset" type="button" disabled>↺ 리셋</button>
         <button id="btnPause" type="button" disabled>Ⅱ 일시정지</button>
         <button id="btnFocus" type="button">⌖ 도시 확대</button>
         <span id="playbackProgress" role="status">재생 대기</span>
       </div>
       <div class="route-caption" id="routeCaption" role="status">항로 탐색 대기</div>
+      <div id="droneStatusPanel" hidden style="position:absolute;top:270px;left:50%;transform:translateX(-50%);z-index:10;background:#0b1b38;color:white;border:1px solid #4e83b8;border-radius:12px;padding:12px 16px;min-width:190px;box-shadow:0 8px 30px #0008;font-size:13px"><strong>드론 상태</strong><button id="closeDroneStatus" type="button" style="float:right;background:transparent;color:white;border:0;cursor:pointer">✕</button><p id="droneStatusText" style="margin:8px 0 0">출발 대기</p></div>
       <div class="hud-bottom-note">합성 도시 · 모의 위험도 · 실제 비행 안전성을 보장하지 않습니다</div>
     </main>
     <script>
