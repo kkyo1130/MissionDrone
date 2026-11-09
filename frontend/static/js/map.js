@@ -323,6 +323,124 @@ async function loadRiskMap() {
   updateLayerStatus();
 }
 
+
+/* Additive Cesium route playback. The referenced makerthon prototype uses a
+   polyline and camera zoom; this extends that pattern with start/end markers
+   and a lightweight drone silhouette without changing mission/UI contracts. */
+let routeMarkers = [];
+let droneParts = [];
+let playbackListener = null;
+let playbackStartedAt = 0;
+const playbackDurationSeconds = 18;
+const droneBodyColor = Cesium.Color.fromCssColorString('#e9f5ff');
+const droneAccentColor = Cesium.Color.fromCssColorString('#3f99ff');
+
+function clearRoutePlayback() {
+  if (playbackListener) {
+    viewer.clock.onTick.removeEventListener(playbackListener);
+    playbackListener = null;
+  }
+  for (const entity of [...routeMarkers, ...droneParts]) viewer.entities.remove(entity);
+  routeMarkers = [];
+  droneParts = [];
+}
+
+function addRoutePin(position, text, color) {
+  const pin = viewer.entities.add({
+    position,
+    point: { pixelSize: 13, color, outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+    label: {
+      text, font: 'bold 14px sans-serif', fillColor: Cesium.Color.WHITE,
+      showBackground: true, backgroundColor: Cesium.Color.fromCssColorString('#0a1a36').withAlpha(0.92),
+      backgroundPadding: new Cesium.Cartesian2(10, 7),
+      pixelOffset: new Cesium.Cartesian2(0, -29),
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
+  routeMarkers.push(pin);
+}
+
+function makeDrone(positionProperty) {
+  // Drone is assembled from native Cesium shapes, requiring no external 3D asset.
+  // Body and four rotors follow the same animated center position.
+  const offsets = [
+    [0, 0, 0], [-2.4, -2.4, 0.2], [-2.4, 2.4, 0.2],
+    [2.4, -2.4, 0.2], [2.4, 2.4, 0.2],
+  ];
+  offsets.forEach(([dx, dy, dz], index) => {
+    const offsetPosition = new Cesium.CallbackProperty((time) => {
+      const center = positionProperty.getValue(time);
+      if (!center) return undefined;
+      const local = new Cesium.Cartesian3(dx, dy, dz);
+      const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+      return Cesium.Matrix4.multiplyByPoint(transform, local, new Cesium.Cartesian3());
+    }, false);
+    droneParts.push(viewer.entities.add({
+      position: offsetPosition,
+      ellipsoid: {
+        radii: index === 0
+          ? new Cesium.Cartesian3(2.6, 1.8, 0.8)
+          : new Cesium.Cartesian3(1.6, 1.6, 0.15),
+        material: index === 0 ? droneBodyColor : droneAccentColor,
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString('#142f57'),
+      },
+    }));
+  });
+  // Arms form the characteristic quadcopter cross.
+  for (const [dx, dy] of [[-2.4, -2.4], [-2.4, 2.4], [2.4, -2.4], [2.4, 2.4]]) {
+    droneParts.push(viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty((time) => {
+          const center = positionProperty.getValue(time);
+          if (!center) return [];
+          const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+          const end = Cesium.Matrix4.multiplyByPoint(transform, new Cesium.Cartesian3(dx, dy, 0), new Cesium.Cartesian3());
+          return [center, end];
+        }, false),
+        width: 4, material: droneBodyColor,
+      },
+    }));
+  }
+}
+
+function startRoutePlayback(positions) {
+  clearRoutePlayback();
+  if (!positions.length) return;
+  addRoutePin(positions[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
+  addRoutePin(positions[positions.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
+
+  // Distance-weighted interpolation keeps the drone moving along every route segment.
+  const distances = [0];
+  for (let i = 1; i < positions.length; i++) {
+    distances.push(distances[i - 1] + Cesium.Cartesian3.distance(positions[i - 1], positions[i]));
+  }
+  const totalDistance = distances[distances.length - 1];
+  const currentPosition = new Cesium.Cartesian3();
+  const dronePosition = new Cesium.CallbackPositionProperty((time, result) => {
+    const elapsed = Math.max(0, Cesium.JulianDate.secondsDifference(time, playbackStartedAt));
+    const target = Math.min(1, elapsed / playbackDurationSeconds) * totalDistance;
+    let index = 1;
+    while (index < distances.length - 1 && distances[index] < target) index++;
+    const segment = distances[index] - distances[index - 1];
+    const ratio = segment > 0 ? (target - distances[index - 1]) / segment : 0;
+    return Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, result || currentPosition);
+  }, false);
+  playbackStartedAt = Cesium.JulianDate.clone(viewer.clock.currentTime);
+  makeDrone(dronePosition);
+  setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
+  playbackListener = (clock) => {
+    const elapsed = Cesium.JulianDate.secondsDifference(clock.currentTime, playbackStartedAt);
+    if (elapsed >= playbackDurationSeconds) {
+      viewer.clock.onTick.removeEventListener(playbackListener);
+      playbackListener = null;
+      setHudText('routeCaption', '도착 지점 도달 · 모의 비행 완료');
+    }
+  };
+  viewer.clock.onTick.addEventListener(playbackListener);
+}
+
 async function findRoute() {
   const payload = {
     start: parsePoint(startInput.value),
@@ -360,10 +478,11 @@ async function findRoute() {
     polyline: {
       positions,
       width: 5,
-      material: Cesium.Color.fromCssColorString('#2d6a4f'),
+      material: Cesium.Color.fromCssColorString('#ffbd18'),
     },
   });
 
+  startRoutePlayback(positions);
   viewer.zoomTo(routeEntity);
   const type = missionTypeInput.value;
   const label = { inspection: '시설 점검', disaster: '재난 대응', delivery: '물류 배송' }[type];
@@ -371,7 +490,7 @@ async function findRoute() {
   setHudText(type + 'Badge', '탐색 완료');
   setHudText(type + 'Detail', detail);
   setHudWidth(type + 'Bar', Math.max(4, (1 - data.average_risk) * 100));
-  setHudText('routeCaption', `${label} · ${detail}`);
+  // The playback status is maintained by the Cesium clock listener.
   statusEl.textContent = `Path length=${data.path_length}, avg risk=${data.average_risk.toFixed(3)}, alpha=${data.alpha.toFixed(2)}`;
 }
 
