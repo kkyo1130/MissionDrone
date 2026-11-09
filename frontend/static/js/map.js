@@ -135,6 +135,7 @@ function selectCandidateRoute(index) {
   }
   renderAllCandidateRoutes(index);
   const positions = route.points.map((point) => voxelToCartesian(point));
+  selectedRouteEnergyWh = Number(route.estimated_energy_wh);
   focusRoute(positions);
   prepareRoutePlayback(positions);
   document.body.classList.remove('settings-open');
@@ -156,6 +157,7 @@ function showRoutePositions(points, detail, risk) {
   clearCandidateRouteEntities();
   if (routeEntity) viewer.entities.remove(routeEntity);
   const positions = points.map((point) => voxelToCartesian(point));
+  selectedRouteEnergyWh = null;
   routeEntity = viewer.entities.add({
     polyline: { positions, width: 6, material: Cesium.Color.fromCssColorString('#ffbd18') },
   });
@@ -442,15 +444,44 @@ const pauseButton = document.getElementById('btnPause');
 const playbackProgress = document.getElementById('playbackProgress');
 const droneStatusPanel = document.getElementById('droneStatusPanel');
 const droneStatusText = document.getElementById('droneStatusText');
-document.getElementById('closeDroneStatus').addEventListener('click', () => {
-  droneStatusPanel.hidden = true;
+const droneBatteryText = document.getElementById('droneBatteryText');
+let selectedRouteEnergyWh = null;
+let droneHoverTimer = null;
+function showDronePanel() {
+  if (!droneMarker || !playbackCenter) return;
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = null;
+  updateDroneStatus();
+  const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
+  if (screen) {
+    const bounds = viewer.scene.canvas.getBoundingClientRect();
+    droneStatusPanel.style.left = Math.max(8, Math.min(window.innerWidth - 250, bounds.left + screen.x + 22)) + 'px';
+    droneStatusPanel.style.top = Math.max(8, Math.min(window.innerHeight - 190, bounds.top + screen.y - 60)) + 'px';
+  }
+  droneStatusPanel.hidden = false;
+}
+function scheduleDronePanelHide() {
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = setTimeout(() => { droneStatusPanel.hidden = true; droneHoverTimer = null; }, 450);
+}
+droneStatusPanel.addEventListener('mouseenter', () => {
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = null;
 });
+droneStatusPanel.addEventListener('mouseleave', scheduleDronePanelHide);
 let droneMarker = null;
 let playbackRunning = false;
 function updateDroneStatus() {
   const status = playbackFinished ? '도착 완료' : playbackRunning
     ? (playbackPaused ? '일시정지' : '비행 중') : '출발 대기';
   droneStatusText.textContent = `${status} · 진행률 ${Math.round(Math.min(100, playbackElapsed / playbackDurationSeconds * 100))}%`;
+  const budget = Number(document.getElementById('batteryBudget').value);
+  if (Number.isFinite(selectedRouteEnergyWh) && Number.isFinite(budget) && budget > 0) {
+    const used = selectedRouteEnergyWh * Math.min(1, playbackElapsed / playbackDurationSeconds);
+    droneBatteryText.textContent = `예상 배터리 ${Math.max(0, 100 - used / budget * 100).toFixed(1)}% · 예상 사용 ${used.toFixed(1)} Wh`;
+  } else {
+    droneBatteryText.textContent = '예상 배터리: 경로 에너지 정보 없음';
+  }
 }
 function setPlaybackControls(enabled) {
   startButton.disabled = !enabled;
@@ -481,12 +512,14 @@ pauseButton.addEventListener('click', () => {
   updateDroneStatus();
 });
 viewer.screenSpaceEventHandler.setInputAction((movement) => {
-  const picked = viewer.scene.pick(movement.position);
+  if (!droneMarker) return;
+  const picked = viewer.scene.pick(movement.endPosition);
   if (Cesium.defined(picked) && picked.id === droneMarker) {
-    updateDroneStatus();
-    droneStatusPanel.hidden = false;
+    showDronePanel();
+  } else if (!droneStatusPanel.hidden && !droneHoverTimer) {
+    scheduleDronePanelHide();
   }
-}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 const playbackDurationSeconds = 18;
 const droneBodyColor = Cesium.Color.fromCssColorString('#e9f5ff');
 const droneAccentColor = Cesium.Color.fromCssColorString('#3f99ff');
@@ -505,6 +538,9 @@ function clearRoutePlayback() {
   droneParts = [];
   droneMarker = null;
   playbackRunning = false;
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = null;
+  droneStatusPanel.hidden = true;
 }
 
 function addRoutePin(position, text, color) {
@@ -624,6 +660,7 @@ function advanceRoutePlayback(now) {
   const ratio = segment > 0 ? (target - playbackDistances[index - 1]) / segment : 0;
   Cesium.Cartesian3.lerp(route[index - 1], route[index], ratio, playbackCenter);
   droneMarker.position = Cesium.Cartesian3.clone(playbackCenter);
+  if (!droneStatusPanel.hidden) showDronePanel();
   droneMarker.label.text = fraction >= 1 ? '드론 · 도착 완료' : '드론 · 비행 중';
   playbackProgress.textContent = `재생 ${Math.round(fraction * 100)}%`;
   updateDroneStatus();
