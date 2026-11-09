@@ -38,8 +38,6 @@ def compute_risk_map(
     raw_risk = (0.65 * venturi + 0.35 * direction_field) * speed_scale
     raw_risk *= free
 
-    max_value = raw_risk.max()
-    if max_value <= 1e-8:
-        return raw_risk
-
-    return np.clip(raw_risk / max_value, 0.0, 1.0)
+    # Fixed-scale normalization: normalizing by each map's maximum would
+    # cancel speed_scale and make 2 m/s and 20 m/s look equally risky.
+    return np.clip(raw_risk, 0.0, 1.0)
