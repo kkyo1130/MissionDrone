@@ -41,7 +41,7 @@ const missionStatusEl = document.getElementById('missionStatus');
 const createMissionButton = document.getElementById('btnCreateMission');
 const gridSpec = window.APP_GRID_SPEC;
 // Show low-risk voxels too; the route planner always uses the full risk map.
-const riskDisplayThreshold = 0.01;
+const riskDisplayThreshold = 0.015;
 const gridOriginWgs84 = gridSpec.originWgs84;
 const missionWeightDefaults = {
   inspection: [0.2, 0.35, 0.25, 0.2],
@@ -357,7 +357,7 @@ async function loadEnvironment() {
         data.voxel_size_m,
         data.voxel_size_m,
       ),
-      material: Cesium.Color.fromCssColorString('#596b7d').withAlpha(0.82),
+      material: Cesium.Color.fromCssColorString('#74899d').withAlpha(0.94),
       outline: true,
       outlineColor: Cesium.Color.fromCssColorString('#243746'),
     },
@@ -399,7 +399,8 @@ async function loadRiskMap() {
           data.voxel_size_m,
           data.voxel_size_m,
         ),
-        material: color.withAlpha(0.3 + risk * 0.55),
+        // Thin overlay: even overlapping low-risk voxels must not hide buildings.
+        material: color.withAlpha(0.055 + risk * 0.22),
         outline: false,
       },
       show: showRiskInput.checked,
