@@ -837,9 +837,13 @@ historicalWeatherButton.addEventListener('click', async () => {
     currentWindDirection = direction;
     refreshHud();
     await loadRiskMap();
+    const correctionText = data.ai_corrected
+      ? ' · AI 보정 ' + Number(data.original_wind_speed_mps).toFixed(2) + ' → ' + speed.toFixed(2) + 'm/s (' + data.correction_station + ')'
+      : ' · AI 보정 미적용 (학습 모델 없음)';
     historicalWeatherStatus.textContent = data.source + ' · ' + data.timestamp_utc +
-      ' · ' + data.wind_speed_mps + 'm/s, ' + data.wind_from_deg +
-      '° · 관측소/재분석 바람을 모의 위험도에 적용 (건물 사이 실측 바람 아님). 항로를 다시 생성해 주세요.';
+      ' · ' + speed.toFixed(2) + 'm/s, ' + direction.toFixed(1) + '°' +
+      (source === 'era5' ? correctionText : '') +
+      ' · 위험도에 적용 완료 (도시 협곡 실측 아님). 후보 항로를 다시 생성해 주세요.';
   } catch (error) {
     historicalWeatherStatus.textContent = '기상 적용 실패: ' + error.message;
   } finally {
