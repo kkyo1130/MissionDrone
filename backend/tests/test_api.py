@@ -13,6 +13,16 @@ def test_health_and_dashboard():
     dashboard = client.get("/")
     assert dashboard.status_code == 200
     assert "APP_GRID_SPEC" in dashboard.text
+    assert "/static/js/map.js" in dashboard.text
+
+
+def test_dashboard_serves_frontend_script():
+    response = client.get("/static/js/map.js")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/javascript")
+    assert "loadRiskMap" in response.text
+    assert "findRoute" in response.text
 
 
 def test_risk_map_returns_voxel_units_and_free_points():
