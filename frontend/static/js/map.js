@@ -455,8 +455,9 @@ function showDronePanel() {
   const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
   if (screen) {
     const bounds = viewer.scene.canvas.getBoundingClientRect();
-    droneStatusPanel.style.left = Math.max(8, Math.min(window.innerWidth - 250, bounds.left + screen.x + 22)) + 'px';
-    droneStatusPanel.style.top = Math.max(8, Math.min(window.innerHeight - 190, bounds.top + screen.y - 60)) + 'px';
+    const parentBounds = droneStatusPanel.offsetParent.getBoundingClientRect();
+    droneStatusPanel.style.left = Math.max(8, Math.min(parentBounds.width - 250, bounds.left - parentBounds.left + screen.x + 22)) + 'px';
+    droneStatusPanel.style.top = Math.max(8, Math.min(parentBounds.height - 190, bounds.top - parentBounds.top + screen.y - 60)) + 'px';
   }
   droneStatusPanel.hidden = false;
 }
