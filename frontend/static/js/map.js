@@ -195,6 +195,7 @@ function showRoutePositions(points, detail, risk) {
   setHudWidth(type + 'Bar', Number.isFinite(risk) ? Math.max(4, (1 - risk) * 100) : 0);
 }
 let obstacleEntities = [];
+let cityGroundEntities = [];
 let riskEntities = [];
 let obstacleCount = 0;
 let riskCount = 0;
@@ -371,32 +372,135 @@ function updateLayerStatus() {
   refreshHud();
 }
 
+// The makerthon prototype's rectangular building volumes are now rendered as
+// complete Cesium buildings. They come from the same bounds as backend
+// OCCUPANCY, so what a drone sees is what the planner avoids.
+function localMetersToCartesian(x, y, z) {
+  return Cesium.Matrix4.multiplyByPoint(
+    enuToFixed, new Cesium.Cartesian3(x, y, z), new Cesium.Cartesian3()
+  );
+}
+
+function addCityBox(collection, x, y, z, width, depth, height, color, outline = false) {
+  const entity = viewer.entities.add({
+    position: localMetersToCartesian(x, y, z),
+    box: {
+      dimensions: new Cesium.Cartesian3(width, depth, height),
+      material: Cesium.Color.fromCssColorString(color),
+      outline,
+      outlineColor: Cesium.Color.fromCssColorString('#142943'),
+    },
+  });
+  collection.push(entity);
+  return entity;
+}
+
+function renderSyntheticDistrict(voxelSizeM) {
+  cityGroundEntities.forEach((entity) => viewer.entities.remove(entity));
+  cityGroundEntities = [];
+  const width = gridSpec.shape[0] * voxelSizeM;
+  const depth = gridSpec.shape[1] * voxelSizeM;
+  // Street and terrain decorations are below flyable z=0 and do not
+  // introduce unmodeled physical obstacles into route collision checks.
+  addCityBox(cityGroundEntities, width / 2, depth / 2, -0.55,
+    width, depth, 1, '#25434c');
+  const streetColor = '#3b5262';
+  const markingsColor = '#99b1bd';
+  const horizontalStreetY = 14 * voxelSizeM;
+  addCityBox(cityGroundEntities, width / 2, horizontalStreetY, -0.04,
+    width, voxelSizeM * 0.9, 0.06, streetColor);
+  for (const x of [3, 29]) {
+    addCityBox(cityGroundEntities, x * voxelSizeM, depth / 2, -0.04,
+      voxelSizeM * 0.8, depth, 0.06, streetColor);
+  }
+  for (let x = voxelSizeM * 1.5; x < width - voxelSizeM; x += voxelSizeM * 2.5) {
+    addCityBox(cityGroundEntities, x, horizontalStreetY, 0.005,
+      voxelSizeM * 0.95, 0.2, 0.025, markingsColor);
+  }
+}
+
+function renderBuildingVolume(building, index, voxelSizeM) {
+  const minimum = building.min;
+  const maximum = building.max;
+  if (!Array.isArray(minimum) || !Array.isArray(maximum) ||
+      minimum.length !== 3 || maximum.length !== 3 ||
+      !minimum.every((value, axis) => Number.isInteger(value) && value >= 0 &&
+        Number.isInteger(maximum[axis]) && maximum[axis] > value &&
+        maximum[axis] <= gridSpec.shape[axis])) {
+    console.warn('Skipping invalid building geometry', building);
+    return;
+  }
+  const x0 = minimum[0] * voxelSizeM;
+  const x1 = maximum[0] * voxelSizeM;
+  const y0 = minimum[1] * voxelSizeM;
+  const y1 = maximum[1] * voxelSizeM;
+  const z0 = minimum[2] * voxelSizeM;
+  const z1 = maximum[2] * voxelSizeM;
+  const xCenter = (x0 + x1) / 2;
+  const yCenter = (y0 + y1) / 2;
+  const width = x1 - x0;
+  const depth = y1 - y0;
+  const height = z1 - z0;
+  const facades = ['#556d86', '#536f82', '#61778b', '#526b7b'];
+  const windows = ['#83bdd4', '#7cc9d4', '#99bfd8', '#7ac5e0'];
+  const facade = facades[index % facades.length];
+  const glass = windows[index % windows.length];
+  addCityBox(obstacleEntities, xCenter, yCenter, (z0 + z1) / 2,
+    width, depth, height, facade, true);
+  // Glass ribbons make the four solid blocked volumes read as 3D buildings
+  // instead of a stack of individual solid voxel cubes.
+  for (let z = z0 + 8; z < z1 - 3; z += 9) {
+    if (width > 8) {
+      addCityBox(obstacleEntities, xCenter, y0 - 0.14, z,
+        width - 5, 0.25, 2.8, glass);
+      addCityBox(obstacleEntities, xCenter, y1 + 0.14, z,
+        width - 5, 0.25, 2.8, glass);
+    }
+    if (depth > 8) {
+      addCityBox(obstacleEntities, x0 - 0.14, yCenter, z,
+        0.25, depth - 5, 2.8, glass);
+      addCityBox(obstacleEntities, x1 + 0.14, yCenter, z,
+        0.25, depth - 5, 2.8, glass);
+    }
+  }
+  // Keep roof detail inside the recorded obstacle volume.
+  addCityBox(obstacleEntities, xCenter, yCenter, z1 - 0.35,
+    width - 1.2, depth - 1.2, 0.7, '#95a7b3');
+  const corners = [[x0 + 0.4, y0 + 0.4], [x0 + 0.4, y1 - 0.4],
+    [x1 - 0.4, y0 + 0.4], [x1 - 0.4, y1 - 0.4]];
+  for (const [x, y] of corners) {
+    addCityBox(obstacleEntities, x, y, (z0 + z1) / 2,
+      0.8, 0.8, Math.max(1, height - 0.7), '#a2b5c2');
+  }
+}
+
 async function loadEnvironment() {
   const response = await fetch('/api/environment');
+  if (!response.ok) throw new Error('환경 복셀 API 요청 실패 (HTTP ' + response.status + ')');
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.detail || '환경 복셀 API 요청 실패');
-  }
   if (!Array.isArray(data.blocked_voxels)) {
     throw new Error('환경 복셀 API 응답 형식이 올바르지 않습니다.');
   }
 
   obstacleEntities.forEach((entity) => viewer.entities.remove(entity));
-  obstacleEntities = data.blocked_voxels.map((point) => viewer.entities.add({
-    position: voxelToCartesian(point),
-    box: {
-      dimensions: new Cesium.Cartesian3(
-        data.voxel_size_m,
-        data.voxel_size_m,
-        data.voxel_size_m,
-      ),
-      material: Cesium.Color.fromCssColorString('#74899d').withAlpha(0.94),
-      outline: true,
-      outlineColor: Cesium.Color.fromCssColorString('#243746'),
-    },
-    show: showObstaclesInput.checked,
-  }));
-  obstacleCount = obstacleEntities.length;
+  obstacleEntities = [];
+  if (Array.isArray(data.buildings) && data.buildings.length) {
+    renderSyntheticDistrict(data.voxel_size_m);
+    data.buildings.forEach((building, index) => {
+      renderBuildingVolume(building, index, data.voxel_size_m);
+    });
+  } else {
+    // Compatible with older API servers that only provide blocked voxel lists.
+    data.blocked_voxels.forEach((point) => {
+      addCityBox(obstacleEntities,
+        (point[0] + 0.5) * data.voxel_size_m,
+        (point[1] + 0.5) * data.voxel_size_m,
+        (point[2] + 0.5) * data.voxel_size_m,
+        data.voxel_size_m, data.voxel_size_m, data.voxel_size_m, '#74899d', true);
+    });
+  }
+  obstacleEntities.forEach((entity) => { entity.show = showObstaclesInput.checked; });
+  obstacleCount = data.blocked_voxels.length;
   updateLayerStatus();
 }
 
