@@ -1,4 +1,34 @@
 const statusEl = document.getElementById('status');
+const settingsToggle = document.getElementById('toggleSettings');
+settingsToggle.addEventListener('click', () => {
+  const opened = document.body.classList.toggle('settings-open');
+  settingsToggle.setAttribute('aria-expanded', String(opened));
+  settingsToggle.textContent = opened ? '✕ 설정 닫기' : '⚙ 임무 설정';
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && document.body.classList.contains('settings-open')) {
+    settingsToggle.click();
+  }
+});
+function setHudText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+function setHudWidth(id, percentage) {
+  const element = document.getElementById(id);
+  if (element) element.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+}
+function refreshHud() {
+  setHudText('hudWind', currentWindSpeed.toFixed(1));
+  setHudText('hudDirection', String(currentWindDirection));
+  setHudText('hudWindMetric', `${currentWindSpeed.toFixed(1)} m/s`);
+  setHudText('hudObstacleCount', `${obstacleCount.toLocaleString()}개`);
+  setHudText('hudRiskCount', `${riskCount.toLocaleString()}개`);
+  setHudText('hudRiskMetric', `${riskCount.toLocaleString()}개`);
+  setHudWidth('hudWindBar', currentWindSpeed / 60 * 100);
+  setHudWidth('hudRiskBar', obstacleCount + riskCount ? riskCount / (obstacleCount + riskCount) * 100 : 0);
+}
+
 const startInput = document.getElementById('start');
 const endInput = document.getElementById('end');
 const windSpeedInput = document.getElementById('windSpeed');
@@ -219,6 +249,7 @@ function updateLayerStatus() {
   statusEl.textContent =
     `장애물 ${obstacleCount} 복셀 · 위험도 ${riskCount} 복셀 · ` +
     `풍속 ${currentWindSpeed} m/s · 풍향 ${currentWindDirection}°`;
+  refreshHud();
 }
 
 async function loadEnvironment() {
@@ -292,6 +323,126 @@ async function loadRiskMap() {
   updateLayerStatus();
 }
 
+
+/* Additive Cesium route playback. The referenced makerthon prototype uses a
+   polyline and camera zoom; this extends that pattern with start/end markers
+   and a lightweight drone silhouette without changing mission/UI contracts. */
+let routeMarkers = [];
+let droneParts = [];
+let playbackListener = null;
+let playbackStartedAt = 0;
+const playbackDurationSeconds = 18;
+const droneBodyColor = Cesium.Color.fromCssColorString('#e9f5ff');
+const droneAccentColor = Cesium.Color.fromCssColorString('#3f99ff');
+
+function clearRoutePlayback() {
+  if (playbackListener) {
+    viewer.clock.onTick.removeEventListener(playbackListener);
+    playbackListener = null;
+  }
+  for (const entity of [...routeMarkers, ...droneParts]) viewer.entities.remove(entity);
+  routeMarkers = [];
+  droneParts = [];
+}
+
+function addRoutePin(position, text, color) {
+  const pin = viewer.entities.add({
+    position,
+    point: { pixelSize: 13, color, outlineColor: Cesium.Color.WHITE, outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+    label: {
+      text, font: 'bold 14px sans-serif', fillColor: Cesium.Color.WHITE,
+      showBackground: true, backgroundColor: Cesium.Color.fromCssColorString('#0a1a36').withAlpha(0.92),
+      backgroundPadding: new Cesium.Cartesian2(10, 7),
+      pixelOffset: new Cesium.Cartesian2(0, -29),
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
+  routeMarkers.push(pin);
+}
+
+function makeDrone(positionProperty) {
+  // Drone is assembled from native Cesium shapes, requiring no external 3D asset.
+  // Body and four rotors follow the same animated center position.
+  const offsets = [
+    [0, 0, 0], [-2.4, -2.4, 0.2], [-2.4, 2.4, 0.2],
+    [2.4, -2.4, 0.2], [2.4, 2.4, 0.2],
+  ];
+  offsets.forEach(([dx, dy, dz], index) => {
+    const offsetPosition = new Cesium.CallbackProperty((time) => {
+      const center = positionProperty.getValue(time);
+      if (!center) return undefined;
+      const local = new Cesium.Cartesian3(dx, dy, dz);
+      const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+      return Cesium.Matrix4.multiplyByPoint(transform, local, new Cesium.Cartesian3());
+    }, false);
+    droneParts.push(viewer.entities.add({
+      position: offsetPosition,
+      ellipsoid: {
+        radii: index === 0
+          ? new Cesium.Cartesian3(2.6, 1.8, 0.8)
+          : new Cesium.Cartesian3(1.6, 1.6, 0.15),
+        material: index === 0 ? droneBodyColor : droneAccentColor,
+        outline: true,
+        outlineColor: Cesium.Color.fromCssColorString('#142f57'),
+      },
+    }));
+  });
+  // Arms form the characteristic quadcopter cross.
+  for (const [dx, dy] of [[-2.4, -2.4], [-2.4, 2.4], [2.4, -2.4], [2.4, 2.4]]) {
+    droneParts.push(viewer.entities.add({
+      polyline: {
+        positions: new Cesium.CallbackProperty((time) => {
+          const center = positionProperty.getValue(time);
+          if (!center) return [];
+          const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+          const end = Cesium.Matrix4.multiplyByPoint(transform, new Cesium.Cartesian3(dx, dy, 0), new Cesium.Cartesian3());
+          return [center, end];
+        }, false),
+        width: 4, material: droneBodyColor,
+      },
+    }));
+  }
+}
+
+function startRoutePlayback(positions) {
+  clearRoutePlayback();
+  if (!positions.length) return;
+  if (positions.length === 1) positions = [positions[0], positions[0]];
+  addRoutePin(positions[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
+  addRoutePin(positions[positions.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
+
+  // Distance-weighted interpolation keeps the drone moving along every route segment.
+  const distances = [0];
+  for (let i = 1; i < positions.length; i++) {
+    distances.push(distances[i - 1] + Cesium.Cartesian3.distance(positions[i - 1], positions[i]));
+  }
+  const totalDistance = distances[distances.length - 1];
+  const currentPosition = new Cesium.Cartesian3();
+  const dronePosition = new Cesium.CallbackPositionProperty((time, result) => {
+    const elapsed = Math.max(0, Cesium.JulianDate.secondsDifference(time, playbackStartedAt));
+    const target = Math.min(1, elapsed / playbackDurationSeconds) * totalDistance;
+    let index = 1;
+    while (index < distances.length - 1 && distances[index] < target) index++;
+    const segment = distances[index] - distances[index - 1];
+    const ratio = segment > 0 ? (target - distances[index - 1]) / segment : 0;
+    return Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, result || currentPosition);
+  }, false);
+  playbackStartedAt = Cesium.JulianDate.clone(viewer.clock.currentTime);
+  viewer.clock.shouldAnimate = true;
+  makeDrone(dronePosition);
+  setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
+  playbackListener = (clock) => {
+    const elapsed = Cesium.JulianDate.secondsDifference(clock.currentTime, playbackStartedAt);
+    if (elapsed >= playbackDurationSeconds) {
+      viewer.clock.onTick.removeEventListener(playbackListener);
+      playbackListener = null;
+      setHudText('routeCaption', '도착 지점 도달 · 모의 비행 완료');
+    }
+  };
+  viewer.clock.onTick.addEventListener(playbackListener);
+}
+
 async function findRoute() {
   const payload = {
     start: parsePoint(startInput.value),
@@ -329,11 +480,19 @@ async function findRoute() {
     polyline: {
       positions,
       width: 5,
-      material: Cesium.Color.fromCssColorString('#2d6a4f'),
+      material: Cesium.Color.fromCssColorString('#ffbd18'),
     },
   });
 
+  startRoutePlayback(positions);
   viewer.zoomTo(routeEntity);
+  const type = missionTypeInput.value;
+  const label = { inspection: '시설 점검', disaster: '재난 대응', delivery: '물류 배송' }[type];
+  const detail = `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`;
+  setHudText(type + 'Badge', '탐색 완료');
+  setHudText(type + 'Detail', detail);
+  setHudWidth(type + 'Bar', Math.max(4, (1 - data.average_risk) * 100));
+  // The playback status is maintained by the Cesium clock listener.
   statusEl.textContent = `Path length=${data.path_length}, avg risk=${data.average_risk.toFixed(3)}, alpha=${data.alpha.toFixed(2)}`;
 }
 
@@ -347,6 +506,11 @@ document.getElementById('btnRisk').addEventListener('click', async () => {
 
 function updateMissionTypeFields() {
   const missionType = missionTypeInput.value;
+  document.querySelectorAll('.mission-choice').forEach((button) => {
+    const active = button.dataset.mission === missionType;
+    button.classList.toggle('selected', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
   const sections = [
     ['inspectionFields', 'inspection'],
     ['disasterFields', 'disaster'],
@@ -370,6 +534,15 @@ function updateMissionTypeFields() {
 }
 
 missionTypeInput.addEventListener('change', updateMissionTypeFields);
+document.querySelectorAll('.mission-choice').forEach((button) => {
+  button.addEventListener('click', () => {
+    missionTypeInput.value = button.dataset.mission;
+    updateMissionTypeFields();
+    document.body.classList.add('settings-open');
+    settingsToggle.setAttribute('aria-expanded', 'true');
+    settingsToggle.textContent = '✕ 설정 닫기';
+  });
+});
 updateMissionTypeFields();
 
 missionForm.addEventListener('submit', async (event) => {
@@ -401,9 +574,7 @@ missionForm.addEventListener('submit', async (event) => {
 
     startInput.value = data.start.join(',');
     endInput.value = data.end.join(',');
-    missionStatusEl.textContent =
-      `임무 저장 완료 · ${data.name} · ID ${data.id} ` +
-      '(메모리 저장: 서버 재시작 시 초기화)';
+    missionStatusEl.textContent = `임무 저장 완료 · ${data.name} · ID ${data.id} (DB 저장)`;
   } catch (error) {
     missionStatusEl.textContent = `임무 저장 실패: ${error.message}`;
   } finally {
@@ -430,6 +601,22 @@ document.getElementById('btnRoute').addEventListener('click', async () => {
     statusEl.textContent = error.message;
   }
 });
+
+windSpeedInput.addEventListener('change', () => {
+  const speed = Number(windSpeedInput.value);
+  if (Number.isFinite(speed) && speed >= 0 && speed <= 60) {
+    currentWindSpeed = speed;
+    refreshHud();
+  }
+});
+windDirectionInput.addEventListener('change', () => {
+  const direction = Number(windDirectionInput.value);
+  if (Number.isFinite(direction) && direction >= 0 && direction <= 360) {
+    currentWindDirection = direction;
+    refreshHud();
+  }
+});
+refreshHud();
 
 Promise.all([loadEnvironment(), loadRiskMap()]).catch((error) => {
   statusEl.textContent = `지도 레이어 로드 실패: ${error.message}`;

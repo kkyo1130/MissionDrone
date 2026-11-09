@@ -108,17 +108,96 @@
         main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
         .panel { border-right: 0; border-bottom: 1px solid rgba(18, 38, 29, 0.1); }
       }
+
+      /* Reference-inspired midnight operations dashboard */
+      :root { --bg-1:#071329; --bg-2:#0b1933; --ink:#f3f7ff; --accent:#317dff; --accent-2:#1e5ed0; --card:rgba(13,29,56,.92); }
+      html,body {height:100%;overflow:hidden;color:#edf5ff;background:#071225;font-family:"Space Grotesk",system-ui,sans-serif}
+      body {display:block;background:radial-gradient(ellipse at 65% 48%,#14294e 0%,#071225 70%)}
+      header {position:absolute;z-index:20;left:0;right:0;top:0;height:68px;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:linear-gradient(180deg,rgba(5,13,30,.95),rgba(5,13,30,.15));border:0;pointer-events:none}
+      header h1{font-size:1rem;font-weight:700;letter-spacing:.03em;color:#e8f2ff}
+      .header-brand{display:flex;align-items:center;gap:10px;pointer-events:auto}
+      .brand-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3185ff,#173767);box-shadow:0 0 24px #2a73ff44}
+      .header-actions{display:flex;align-items:center;gap:10px;pointer-events:auto}
+      .live-badge{border:1px solid #ff6973aa;color:#ffb7bd;background:#5b1c2caa;border-radius:8px;padding:8px 12px;font-size:.74rem;font-weight:700}
+      .header-actions button{width:auto;padding:9px 14px;border:1px solid #45648e;background:#102849;color:#dfeeff;font-size:.8rem}
+      main{position:relative;display:block;width:100%;height:100vh;min-height:0}
+      #viewer{position:absolute;inset:0;width:100%;height:100%;min-height:0;background:radial-gradient(ellipse at 52% 55%,#122747,#071225 75%)}
+      .panel{position:absolute;z-index:30;top:76px;left:18px;bottom:20px;width:min(345px,calc(100vw - 36px));padding:20px;background:rgba(10,24,48,.97);border:1px solid #314d78;border-radius:16px;box-shadow:0 20px 60px #0008;transform:translateX(calc(-100% - 30px));transition:transform .25s ease;scrollbar-width:thin;scrollbar-color:#38577f transparent}
+      body.settings-open .panel{transform:translateX(0)}
+      .panel h2,.panel h3{color:#f2f7ff}
+      .panel label{color:#c5d5ee}
+      .panel input:not([type="checkbox"]),.panel select{color:#eef5ff;background:#101f3a;border:1px solid #3b5275}
+      .panel input::placeholder{color:#8198ba}
+      .mission-help,.layer-note{color:#a4b5cf}
+      .panel button{background:linear-gradient(135deg,#3988ff,#1854bc)}
+      .panel button.secondary{background:#203f68}
+      #status{color:#c9d9f4;background:#13284a;border:1px solid #28456b}
+      .hud-card{position:absolute;z-index:10;background:rgba(10,25,51,.90);border:1px solid rgba(73,108,157,.44);box-shadow:0 10px 32px #0005;backdrop-filter:blur(14px);border-radius:13px;color:#e7f1ff}
+      .hud-weather{left:20px;top:82px;display:flex;align-items:center;gap:14px;padding:12px 16px;min-width:220px}
+      .weather-icon{font-size:1.8rem;filter:drop-shadow(0 0 8px #4a9eff)}
+      .hud-kicker{font-size:.67rem;color:#8faad0;letter-spacing:.1em;font-weight:700;text-transform:uppercase}
+      .hud-value{font-size:1.2rem;font-weight:700;margin-top:3px}
+      .hud-sub{font-size:.73rem;color:#abc0df}
+      .hud-legend{bottom:20px;left:20px;width:215px;padding:15px}
+      .hud-card h2{font-size:.87rem;margin:0 0 13px;font-weight:700}
+      .legend-row{display:flex;align-items:center;gap:10px;margin-top:9px;font-size:.78rem;color:#d9e6fb}
+      .legend-swatch{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;font-size:.85rem}
+      .swatch-blue{background:#164da0;color:#8ec1ff}.swatch-red{background:#8b1c35;color:#ffb5be}.swatch-gold{background:#775312;color:#ffe28b}
+      .legend-row small{margin-left:auto;color:#9eb3d3}
+      .hud-metrics{right:20px;bottom:20px;width:245px;padding:16px}
+      .metric{margin-top:12px}
+      .metric-head{display:flex;align-items:center;justify-content:space-between;font-size:.74rem;color:#b8cbe7}
+      .metric-head strong{color:#e8f4ff;font-size:.75rem}
+      .metric-track{height:6px;background:#1e3659;border-radius:8px;overflow:hidden;margin-top:8px}
+      .metric-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,#3477ee,#61b6ff);width:50%;transition:width .35s}
+      .metric-fill.red{background:linear-gradient(90deg,#ed4563,#ff8b80)}
+      .metric-fill.gold{background:linear-gradient(90deg,#e8a63e,#ffdb79)}
+      .hud-bottom-note{position:absolute;z-index:10;left:50%;bottom:24px;transform:translateX(-50%);padding:8px 13px;background:#0b1b37dd;border:1px solid #304b74;border-radius:999px;color:#a9c3e7;font-size:.7rem;max-width:calc(100vw - 520px);text-align:center}
+      .cesium-viewer-toolbar{top:80px!important;right:20px!important}
+      .cesium-widget-credits{opacity:.65}
+      @media(max-width:760px){header{height:60px;padding:9px 12px}.header-brand h1{font-size:.8rem}.live-badge{display:none}.hud-weather{top:69px;left:12px;min-width:0;padding:9px 12px}.hud-legend{left:12px;bottom:12px;width:165px;padding:11px}.hud-metrics{right:12px;bottom:12px;width:175px;padding:11px}.hud-bottom-note{display:none}.hud-card h2{font-size:.78rem}.legend-row{font-size:.68rem}.metric-head{font-size:.66rem}.panel{top:66px;bottom:10px;left:10px}}
+      @media(max-width:420px){.hud-legend{width:145px}.hud-metrics{width:155px}.weather-icon{font-size:1.2rem}.hud-value{font-size:1rem}}
+
+      /* Reference composition: compact cards over a central 3D city */
+      .hud-weather{top:84px;left:26px;min-width:260px;border-color:#29416b;background:#0d1d3cf0}
+      .hud-weather .hud-value{font-size:1.45rem}
+      .hud-legend{left:26px;bottom:26px;width:255px;padding:18px}
+      .hud-metrics{right:26px;bottom:26px;width:295px;padding:18px}
+      .hud-card h2{font-size:1rem}
+      .mission-choice{display:flex;align-items:center;gap:11px;width:100%;text-align:left;margin:9px 0 0;padding:10px 11px;border:1px solid #31517d;border-radius:10px;background:#142b51;color:#f2f6ff;font-size:.84rem;box-shadow:none;cursor:pointer}
+      .mission-choice.selected{border-color:#3c91ff;background:#193862}
+      .mission-choice[data-mission="disaster"]{border-color:#7b334d;background:#311e3b}
+      .mission-choice[data-mission="delivery"]{border-color:#78602c;background:#302c24}
+      .mission-choice-icon{display:grid;place-items:center;width:29px;height:29px;border-radius:7px;font-size:1.15rem;font-weight:700}
+      .mission-choice-icon.blue{background:#347fff}.mission-choice-icon.red{background:#f34361}.mission-choice-icon.gold{background:#f4a900}
+      .mission-choice small{margin-left:auto;border-radius:6px;padding:4px 7px;background:#ffffff18;color:#d4e1f8;font-size:.67rem}
+      .legend-counts{display:flex;justify-content:space-between;gap:8px;border-top:1px solid #294469;margin-top:14px;padding-top:12px;color:#8eacd4;font-size:.68rem}
+      .legend-counts b{color:#d7e8ff}
+      .mission-metric{border:1px solid #2a426a;background:#152442;border-radius:11px;padding:12px;margin-top:10px}
+      .mission-metric .metric-head{font-size:.83rem}.mission-metric .metric-head strong{font-size:.68rem;border-radius:6px;background:#273e61;padding:4px 6px}
+      .mission-metric p{font-size:.69rem;color:#93a9cb;margin:8px 0 0}
+      .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}.dot.blue{background:#3688ff}.dot.red{background:#ff4669}.dot.gold{background:#ffb500}
+      .simulation-tag{float:right;font-size:.64rem;color:#95b2db;font-weight:500}
+      .wind-summary{border-top:1px solid #294469;padding-top:11px;margin-top:13px;font-size:.69rem;color:#9db3d4}.wind-summary b{color:#e2efff}
+      .route-marker{position:absolute;z-index:9;top:48%;left:48%;background:#091933e8;border:1px solid #f4b422;border-radius:9px;padding:7px 12px;color:#fff;font-weight:700;font-size:.79rem;pointer-events:none;display:none}
+      .route-marker span{display:inline-grid;place-items:center;background:#f5ad08;border-radius:50%;width:23px;height:23px;margin-right:7px;color:#fff}
+      .end-marker{top:34%;left:65%}
+      .route-caption{position:absolute;z-index:9;left:50%;bottom:24px;transform:translateX(-50%);padding:9px 15px;border-radius:20px;background:#091c39e9;border:1px solid #395f8f;color:#c6defb;font-size:.75rem;pointer-events:none}
+      .hud-bottom-note{bottom:65px}
+      @media(max-width:760px){.hud-weather{left:12px;top:69px;min-width:0}.hud-legend{left:12px;bottom:12px;width:175px;padding:10px}.hud-metrics{right:12px;bottom:12px;width:190px;padding:10px}.mission-choice{font-size:.7rem;padding:7px 6px;gap:5px}.mission-choice-icon{width:22px;height:22px}.mission-metric{padding:8px}.mission-metric p{font-size:.61rem}.hud-bottom-note,.route-caption{display:none}}
+      @media(max-width:420px){.hud-legend{width:145px}.hud-metrics{width:158px}.mission-choice small{display:none}.mission-metric .metric-head{font-size:.67rem}.mission-metric .metric-head strong{font-size:.57rem}}
     </style>
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
   </head>
   <body>
     <header>
-      <h1>MissionDrone 3D Risk Visualization Prototype</h1>
+      <div class="header-brand"><span class="brand-icon" aria-hidden="true">✦</span><h1>MISSIONDRONE <span style="color:#86b9ff;font-weight:500">/ 3D 관제</span></h1></div>
+      <div class="header-actions"><span class="live-badge">● 모의 비행 · 실시간 관제 아님</span><button id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 임무 설정</button></div>
     </header>
     <main>
-      <aside class="panel">
-        <h2>Scenario Input</h2>
+      <aside class="panel" id="settingsPanel" aria-label="임무 설정 패널">
+        <h2>임무 및 비행 조건</h2>
         <form id="missionForm">
           <div class="group">
             <label for="missionName">임무 이름</label>
@@ -259,7 +338,23 @@
         <p class="layer-note">Mock 환경의 휴리스틱 위험도이며 실제 비행 안전성을 보장하지 않습니다.</p>
         <div id="status">Grid: {{ grid_shape }} ({{ voxel_size_m }} m voxels)</div>
       </aside>
-      <section id="viewer"></section>
+      <section id="viewer" aria-label="3D 드론 비행 시뮬레이션 지도"></section>
+      <div class="hud-card hud-weather" aria-live="polite"><span class="weather-icon" aria-hidden="true">☁</span><div><div class="hud-kicker">SIMULATED WEATHER</div><div class="hud-value"><span id="hudWind">8.0</span> m/s</div><div class="hud-sub">풍향 <span id="hudDirection">90</span>° · 가상 기상 조건</div></div></div>
+      <div class="hud-card hud-legend"><h2>드론 임무 선택</h2>
+        <button type="button" class="mission-choice selected" data-mission="inspection"><span class="mission-choice-icon blue">▥</span><span>시설 점검</span><small id="inspectionState">선택</small></button>
+        <button type="button" class="mission-choice" data-mission="disaster"><span class="mission-choice-icon red">♨</span><span>재난 대응</span><small id="disasterState">대기</small></button>
+        <button type="button" class="mission-choice" data-mission="delivery"><span class="mission-choice-icon gold">⬡</span><span>물류 배송</span><small id="deliveryState">대기</small></button>
+        <div class="legend-counts"><span>장애물 <b id="hudObstacleCount">–</b></span><span>위험 복셀 <b id="hudRiskCount">–</b></span></div></div>
+      <div class="hud-card hud-metrics"><h2>임무별 현황 <span class="simulation-tag">시뮬레이션</span></h2>
+        <div class="mission-metric"><div class="metric-head"><span><i class="dot blue"></i> 시설 점검</span><strong id="inspectionBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill" id="inspectionBar" style="width:0%"></div></div><p id="inspectionDetail">점검 항로를 생성해 주세요</p></div>
+        <div class="mission-metric"><div class="metric-head"><span><i class="dot red"></i> 재난 대응</span><strong id="disasterBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill red" id="disasterBar" style="width:0%"></div></div><p id="disasterDetail">재난 항로를 생성해 주세요</p></div>
+        <div class="mission-metric"><div class="metric-head"><span><i class="dot gold"></i> 물류 배송</span><strong id="deliveryBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill gold" id="deliveryBar" style="width:0%"></div></div><p id="deliveryDetail">배송 항로를 생성해 주세요</p></div>
+        <div class="wind-summary">모의 풍속 <b id="hudWindMetric">8.0 m/s</b> · 위험 복셀 <b id="hudRiskMetric">계산 중</b></div>
+      </div>
+      <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
+      <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
+      <div class="route-caption" id="routeCaption" role="status">항로 탐색 대기</div>
+      <div class="hud-bottom-note">합성 도시 · 모의 위험도 · 실제 비행 안전성을 보장하지 않습니다</div>
     </main>
     <script>
       window.APP_GRID_SPEC = {
