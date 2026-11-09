@@ -40,7 +40,8 @@ const missionTypeInput = document.getElementById('missionType');
 const missionStatusEl = document.getElementById('missionStatus');
 const createMissionButton = document.getElementById('btnCreateMission');
 const gridSpec = window.APP_GRID_SPEC;
-const riskThreshold = 0.7;
+// Show low-risk voxels too; the route planner always uses the full risk map.
+const riskDisplayThreshold = 0.01;
 const gridOriginWgs84 = gridSpec.originWgs84;
 const missionWeightDefaults = {
   inspection: [0.2, 0.35, 0.25, 0.2],
@@ -92,11 +93,59 @@ const enuToFixed = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
 let routeEntity = null;
 let currentMissionId = null;
 let candidateRoutes = [];
+let candidateRouteEntities = [];
+const candidateRouteColors = ['#32b7f5', '#b78aff', '#40d4ac', '#ff8c75', '#d7dce8'];
+function clearCandidateRouteEntities() {
+  for (const entity of candidateRouteEntities) viewer.entities.remove(entity);
+  candidateRouteEntities = [];
+}
+function renderAllCandidateRoutes(selectedIndex = 0) {
+  clearCandidateRouteEntities();
+  // Draw every candidate simultaneously; the selected route is yellow and wider.
+  candidateRoutes.forEach((route, index) => {
+    const selected = index === selectedIndex;
+    const positions = route.points.map((point) => voxelToCartesian(point));
+    candidateRouteEntities.push(viewer.entities.add({
+      name: '후보 항로 ' + (index + 1),
+      polyline: {
+        positions,
+        width: selected ? 8 : 4,
+        material: Cesium.Color.fromCssColorString(
+          selected ? '#ffbd18' : candidateRouteColors[index % candidateRouteColors.length]
+        ).withAlpha(selected ? 1 : 0.75),
+        clampToGround: false,
+      },
+    }));
+  });
+}
+function selectCandidateRoute(index) {
+  const route = candidateRoutes[index];
+  if (!route) return;
+  if (routeEntity) {
+    viewer.entities.remove(routeEntity);
+    routeEntity = null;
+  }
+  renderAllCandidateRoutes(index);
+  const positions = route.points.map((point) => voxelToCartesian(point));
+  startRoutePlayback(positions);
+  focusCity();
+  document.body.classList.remove('settings-open');
+  settingsToggle.setAttribute('aria-expanded', 'false');
+  settingsToggle.textContent = '⚙ 임무 설정';
+  const type = missionTypeInput.value;
+  setHudText(type + 'Badge', '항로 생성');
+  setHudText(type + 'Detail',
+    '선택 후보 ' + (index + 1) + ' · ' + route.distance_m.toFixed(0) + 'm · ' +
+    route.estimated_time_s.toFixed(0) + '초 · ' + route.estimated_energy_wh.toFixed(1) + 'Wh');
+  setHudWidth(type + 'Bar',
+    Number.isFinite(route.average_risk) ? Math.max(4, (1 - route.average_risk) * 100) : 0);
+}
 const candidateSelect = document.getElementById('candidateSelect');
 const candidateSummary = document.getElementById('candidateSummary');
 const experimentSummary = document.getElementById('experimentSummary');
 const experimentButton = document.getElementById('btnExperiment');
 function showRoutePositions(points, detail, risk) {
+  clearCandidateRouteEntities();
   if (routeEntity) viewer.entities.remove(routeEntity);
   const positions = points.map((point) => voxelToCartesian(point));
   routeEntity = viewer.entities.add({
@@ -322,7 +371,7 @@ async function loadRiskMap() {
   const params = new URLSearchParams({
     wind_speed: windSpeedInput.value,
     wind_direction: windDirectionInput.value,
-    threshold: String(riskThreshold),
+    threshold: String(riskDisplayThreshold),
   });
   const response = await fetch(`/api/risk-map?${params}`);
   const data = await response.json();
@@ -331,9 +380,17 @@ async function loadRiskMap() {
   }
 
   clearRisk();
-  const lowRiskColor = Cesium.Color.fromCssColorString('#ffd166');
-  const highRiskColor = Cesium.Color.fromCssColorString('#d00000');
+  // Absolute risk scale: green (low) -> yellow (medium) -> red (high).
+  // Do not normalize by the displayed voxels' maximum: that would make
+  // low-wind conditions look artificially dangerous.
+  const lowRiskColor = Cesium.Color.fromCssColorString('#22c55e');
+  const mediumRiskColor = Cesium.Color.fromCssColorString('#facc15');
+  const highRiskColor = Cesium.Color.fromCssColorString('#ef4444');
   for (const point of data.points) {
+    const risk = Math.max(0, Math.min(1, Number(point.risk)));
+    const color = risk <= 0.5
+      ? Cesium.Color.lerp(lowRiskColor, mediumRiskColor, risk * 2, new Cesium.Color())
+      : Cesium.Color.lerp(mediumRiskColor, highRiskColor, (risk - 0.5) * 2, new Cesium.Color());
     riskEntities.push(viewer.entities.add({
       position: voxelToCartesian([point.x, point.y, point.z]),
       box: {
@@ -342,12 +399,7 @@ async function loadRiskMap() {
           data.voxel_size_m,
           data.voxel_size_m,
         ),
-        material: Cesium.Color.lerp(
-          lowRiskColor,
-          highRiskColor,
-          point.risk,
-          new Cesium.Color(),
-        ).withAlpha(0.35 + point.risk * 0.55),
+        material: color.withAlpha(0.3 + risk * 0.55),
         outline: false,
       },
       show: showRiskInput.checked,
@@ -630,6 +682,7 @@ missionForm.addEventListener('submit', async (event) => {
     }
 
     currentMissionId = data.id;
+    clearCandidateRouteEntities();
     candidateRoutes = [];
     candidateSelect.innerHTML = '<option value="">후보 항로 생성 필요</option>';
     candidateSelect.disabled = true;
@@ -676,6 +729,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(formatApiError(result.detail));
+    clearCandidateRouteEntities();
     candidateRoutes = result.routes || [];
     if (!candidateRoutes.length) {
       candidateSelect.innerHTML = '<option value="">생성 가능한 항로 없음</option>';
@@ -693,7 +747,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
     });
     candidateSelect.disabled = !candidateRoutes.length;
     experimentButton.disabled = !candidateRoutes.length;
-    candidateSummary.textContent = `${result.generated_count}개 생성 · ${result.reason || '후보를 선택해 비행을 재생하세요.'}`;
+    candidateSummary.textContent = `${result.generated_count}개 항로를 동시에 표시 중 · 선택한 항로는 노란색 · ${result.reason || '후보를 선택하면 해당 항로를 재생합니다.'}`;
     if (candidateRoutes.length) candidateSelect.dispatchEvent(new Event('change'));
   } catch (error) {
     candidateSummary.textContent = `후보 생성 실패: ${error.message}`;
@@ -705,17 +759,21 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
 candidateSelect.addEventListener('change', () => {
   const route = candidateRoutes[Number(candidateSelect.value)];
   if (!route) return;
-  showRoutePositions(route.points, `후보 항로 · ${route.distance_m.toFixed(0)}m · ${route.estimated_time_s.toFixed(0)}초 · ${route.estimated_energy_wh.toFixed(1)}Wh`, route.average_risk);
+  selectCandidateRoute(Number(candidateSelect.value));
 });
 experimentButton.addEventListener('click', async () => {
   if (!currentMissionId || !candidateRoutes.length) return;
   experimentButton.disabled = true;
-  experimentSummary.textContent = '약풍·중풍·강풍 시나리오를 반복 시뮬레이션하는 중...';
+  experimentSummary.textContent = activeWeatherProvenance ? '선택한 과거 기상 조건으로 반복 시뮬레이션 중...' : '약풍·중풍·강풍 시나리오를 반복 시뮬레이션하는 중...';
   try {
     const response = await fetch(`/api/missions/${currentMissionId}/experiments`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        weather: [
+        weather: activeWeatherProvenance ? [
+          {name: activeWeatherProvenance.source + ' ' + activeWeatherProvenance.timestamp_utc,
+           wind_speed_mps: Number(windSpeedInput.value),
+           wind_from_deg: Number(windDirectionInput.value)},
+        ] : [
           {name:'약풍',wind_speed_mps:2,wind_from_deg:90},
           {name:'중풍',wind_speed_mps:8,wind_from_deg:90},
           {name:'강풍',wind_speed_mps:15,wind_from_deg:90},
@@ -754,7 +812,51 @@ document.getElementById('btnRoute').addEventListener('click', async () => {
   }
 });
 
+const historicalWeatherButton = document.getElementById('btnApplyHistoricalWeather');
+const historicalWeatherStatus = document.getElementById('historicalWeatherStatus');
+let activeWeatherProvenance = null;
+historicalWeatherButton.addEventListener('click', async () => {
+  historicalWeatherButton.disabled = true;
+  historicalWeatherStatus.textContent = '선택한 시간의 기상 데이터를 조회 중...';
+  try {
+    const at = document.getElementById('historicalWeatherAt').value;
+    if (!at) throw new Error('과거 날짜와 시간을 선택해 주세요.');
+    const source = document.getElementById('historicalWeatherSource').value;
+    // datetime-local is intentionally interpreted as UTC for reproducible historical scenarios.
+    const params = new URLSearchParams({at: at + ':00Z', source});
+    const response = await fetch('/api/weather/historical?' + params);
+    const data = await response.json();
+    if (!response.ok) throw new Error(formatApiError(data.detail));
+    const speed = Number(data.wind_speed_mps);
+    const direction = Number(data.wind_from_deg);
+    if (!Number.isFinite(speed) || speed < 0 || speed > 60 ||
+        !Number.isFinite(direction) || direction < 0 || direction > 360) {
+      throw new Error('기상 데이터의 풍속 또는 풍향이 지원 범위를 벗어났습니다.');
+    }
+    // Preserve observed/reanalysis precision (e.g. 2.59 m/s); never round to 0.1 m/s.
+    windSpeedInput.value = String(speed);
+    windDirectionInput.value = String(direction);
+    activeWeatherProvenance = data;
+    currentWindSpeed = speed;
+    currentWindDirection = direction;
+    refreshHud();
+    await loadRiskMap();
+    const correctionText = data.ai_corrected
+      ? ' · AI 보정 ' + Number(data.original_wind_speed_mps).toFixed(2) + ' → ' + speed.toFixed(2) + 'm/s (' + data.correction_station + ')'
+      : ' · AI 보정 미적용 (학습 모델 없음)';
+    historicalWeatherStatus.textContent = data.source + ' · ' + data.timestamp_utc +
+      ' · ' + speed.toFixed(2) + 'm/s, ' + direction.toFixed(1) + '°' +
+      (source === 'era5' ? correctionText : '') +
+      ' · 위험도에 적용 완료 (도시 협곡 실측 아님). 후보 항로를 다시 생성해 주세요.';
+  } catch (error) {
+    historicalWeatherStatus.textContent = '기상 적용 실패: ' + error.message;
+  } finally {
+    historicalWeatherButton.disabled = false;
+  }
+});
+
 windSpeedInput.addEventListener('change', () => {
+  activeWeatherProvenance = null;
   const speed = Number(windSpeedInput.value);
   if (Number.isFinite(speed) && speed >= 0 && speed <= 60) {
     currentWindSpeed = speed;
@@ -762,6 +864,7 @@ windSpeedInput.addEventListener('change', () => {
   }
 });
 windDirectionInput.addEventListener('change', () => {
+  activeWeatherProvenance = null;
   const direction = Number(windDirectionInput.value);
   if (Number.isFinite(direction) && direction >= 0 && direction <= 360) {
     currentWindDirection = direction;
