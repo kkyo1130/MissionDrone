@@ -44,3 +44,24 @@ deliberately not wired into A* safety costs or autonomous flight. Integrating
 it into voxel risk correction requires co-located urban wind measurements,
 spatial features, out-of-sample validation, and a conservative fallback.
 ERA5 is reanalysis, not a direct measurement.
+
+## Applying historical weather to the 3D environment
+
+1. Download an actual NOAA Global Hourly station CSV containing `DATE` and `WND`.
+2. Set `NOAA_STATION_CSV` to its **absolute path**, and `NOAA_STATION_ID` to the station identifier.
+3. Run the backend and open the Cesium dashboard.
+4. Enter a **UTC** historical timestamp (the date/time control is interpreted as UTC).
+5. Choose **NOAA 관측소 실측**, then click **과거 기상 데이터 적용**.
+6. The selected station wind speed/direction update the simulation input fields and 3D risk map.
+   Generate new candidate routes to use the updated wind. Repeated simulation uses the
+   selected historical wind scenario. Existing routes are not retroactively recomputed.
+
+Alternatively choose **ERA5 재분석**: this fetches historical reanalysis for the
+configured `WEATHER_LATITUDE` and `WEATHER_LONGITUDE` (defaults 37.37,126.62).
+ERA5 is **not** direct observation and is labeled separately. NOAA is never silently
+replaced by ERA5 when the station file is missing.
+
+The risk map still uses a simplified heuristic; this feature is *historical
+weather input integration*, **not** learned per-voxel wind correction. The AI
+station wind model remains opt-in via `/api/ai/correct-wind` and is not
+automatically applied to flight safety decisions.
