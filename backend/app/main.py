@@ -28,7 +28,7 @@ from app.core.physics import compute_risk_map
 from app.core.routing import generate_route_candidates
 from app.core.simulation import simulate_route, compare_runs
 from app.store import Store
-from app.core.voxel import GridSpec, create_airspace_grid
+from app.core.voxel import BUILDING_VOLUMES, GridSpec, create_airspace_grid
 from app.schemas.missions import (
     DisasterMission,
     InspectionMission,
@@ -190,6 +190,16 @@ def environment_api() -> Dict[str, Any]:
         "grid_shape": list(OCCUPANCY.shape),
         "voxel_size_m": GRID_SPEC.voxel_size_m,
         "blocked_voxels": blocked_voxels.tolist(),
+        "buildings": [
+            {
+                "id": building["id"],
+                "name": building["name"],
+                "min": list(building["min"]),
+                "max": list(building["max"]),
+            }
+            for building in BUILDING_VOLUMES
+        ],
+        "environment_kind": "synthetic_buildings",
     }
 
 
