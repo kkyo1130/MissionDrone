@@ -24,6 +24,7 @@ load_dotenv(REPOSITORY_ROOT / ".env")
 
 GRID_SPEC = GridSpec()
 OCCUPANCY = create_airspace_grid(GRID_SPEC)
+GRID_ORIGIN_WGS84 = (126.62, 37.37, 0.0)
 PointInput = Tuple[StrictInt, StrictInt, StrictInt]
 
 app = FastAPI(title="MissionDrone API", version="0.1.0")
@@ -73,6 +74,7 @@ def index(request: Request) -> HTMLResponse:
         context={
             "grid_shape": OCCUPANCY.shape,
             "voxel_size_m": GRID_SPEC.voxel_size_m,
+            "origin_wgs84": GRID_ORIGIN_WGS84,
             "cesium_ion_token": os.getenv("CESIUM_ION_TOKEN", ""),
         },
     )
@@ -81,6 +83,16 @@ def index(request: Request) -> HTMLResponse:
 @app.get("/health")
 def health() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/environment")
+def environment_api() -> Dict[str, Any]:
+    blocked_voxels = np.argwhere(OCCUPANCY == 0)
+    return {
+        "grid_shape": list(OCCUPANCY.shape),
+        "voxel_size_m": GRID_SPEC.voxel_size_m,
+        "blocked_voxels": blocked_voxels.tolist(),
+    }
 
 
 @app.get("/api/risk-map")

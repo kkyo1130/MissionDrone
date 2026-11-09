@@ -3,7 +3,11 @@ const startInput = document.getElementById('start');
 const endInput = document.getElementById('end');
 const windSpeedInput = document.getElementById('windSpeed');
 const windDirectionInput = document.getElementById('windDirection');
+const showObstaclesInput = document.getElementById('showObstacles');
+const showRiskInput = document.getElementById('showRisk');
 const gridSpec = window.APP_GRID_SPEC;
+const riskThreshold = 0.7;
+const gridOriginWgs84 = gridSpec.originWgs84;
 
 if (gridSpec.cesiumIonToken) {
   Cesium.Ion.defaultAccessToken = gridSpec.cesiumIonToken;
@@ -21,14 +25,23 @@ const viewer = new Cesium.Viewer('viewer', {
 
 viewer.scene.globe.depthTestAgainstTerrain = false;
 viewer.camera.flyTo({
-  destination: Cesium.Cartesian3.fromDegrees(126.62, 37.37, 3000),
+  destination: Cesium.Cartesian3.fromDegrees(
+    gridOriginWgs84[0],
+    gridOriginWgs84[1],
+    3000,
+  ),
   duration: 0,
 });
 
-const origin = Cesium.Cartesian3.fromDegrees(126.62, 37.37, 0);
+const origin = Cesium.Cartesian3.fromDegrees(...gridOriginWgs84);
 const enuToFixed = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
 let routeEntity = null;
+let obstacleEntities = [];
 let riskEntities = [];
+let obstacleCount = 0;
+let riskCount = 0;
+let currentWindSpeed = Number(windSpeedInput.value);
+let currentWindDirection = Number(windDirectionInput.value);
 
 function parsePoint(text) {
   const parts = text.split(',').map((value) => Number(value.trim()));
@@ -56,11 +69,46 @@ function clearRisk() {
   riskEntities = [];
 }
 
+function updateLayerStatus() {
+  statusEl.textContent =
+    `장애물 ${obstacleCount} 복셀 · 위험도 ${riskCount} 복셀 · ` +
+    `풍속 ${currentWindSpeed} m/s · 풍향 ${currentWindDirection}°`;
+}
+
+async function loadEnvironment() {
+  const response = await fetch('/api/environment');
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || '환경 복셀 API 요청 실패');
+  }
+  if (!Array.isArray(data.blocked_voxels)) {
+    throw new Error('환경 복셀 API 응답 형식이 올바르지 않습니다.');
+  }
+
+  obstacleEntities.forEach((entity) => viewer.entities.remove(entity));
+  obstacleEntities = data.blocked_voxels.map((point) => viewer.entities.add({
+    position: voxelToCartesian(point),
+    box: {
+      dimensions: new Cesium.Cartesian3(
+        data.voxel_size_m,
+        data.voxel_size_m,
+        data.voxel_size_m,
+      ),
+      material: Cesium.Color.fromCssColorString('#596b7d').withAlpha(0.82),
+      outline: true,
+      outlineColor: Cesium.Color.fromCssColorString('#243746'),
+    },
+    show: showObstaclesInput.checked,
+  }));
+  obstacleCount = obstacleEntities.length;
+  updateLayerStatus();
+}
+
 async function loadRiskMap() {
   const params = new URLSearchParams({
     wind_speed: windSpeedInput.value,
     wind_direction: windDirectionInput.value,
-    threshold: '0.7',
+    threshold: String(riskThreshold),
   });
   const response = await fetch(`/api/risk-map?${params}`);
   const data = await response.json();
@@ -69,6 +117,8 @@ async function loadRiskMap() {
   }
 
   clearRisk();
+  const lowRiskColor = Cesium.Color.fromCssColorString('#ffd166');
+  const highRiskColor = Cesium.Color.fromCssColorString('#d00000');
   for (const point of data.points) {
     riskEntities.push(viewer.entities.add({
       position: voxelToCartesian([point.x, point.y, point.z]),
@@ -78,15 +128,22 @@ async function loadRiskMap() {
           data.voxel_size_m,
           data.voxel_size_m,
         ),
-        material: Cesium.Color.fromCssColorString('#d06f2f').withAlpha(
-          Math.min(0.95, point.risk),
-        ),
+        material: Cesium.Color.lerp(
+          lowRiskColor,
+          highRiskColor,
+          point.risk,
+          new Cesium.Color(),
+        ).withAlpha(0.35 + point.risk * 0.55),
         outline: false,
       },
+      show: showRiskInput.checked,
     }));
   }
 
-  statusEl.textContent = `Risk voxels: ${data.points.length}, wind=${data.wind_speed}, dir=${data.wind_direction}`;
+  riskCount = riskEntities.length;
+  currentWindSpeed = data.wind_speed;
+  currentWindDirection = data.wind_direction;
+  updateLayerStatus();
 }
 
 async function findRoute() {
@@ -142,6 +199,18 @@ document.getElementById('btnRisk').addEventListener('click', async () => {
   }
 });
 
+showObstaclesInput.addEventListener('change', () => {
+  obstacleEntities.forEach((entity) => {
+    entity.show = showObstaclesInput.checked;
+  });
+});
+
+showRiskInput.addEventListener('change', () => {
+  riskEntities.forEach((entity) => {
+    entity.show = showRiskInput.checked;
+  });
+});
+
 document.getElementById('btnRoute').addEventListener('click', async () => {
   try {
     await findRoute();
@@ -150,6 +219,6 @@ document.getElementById('btnRoute').addEventListener('click', async () => {
   }
 });
 
-loadRiskMap().catch((error) => {
-  statusEl.textContent = error.message;
+Promise.all([loadEnvironment(), loadRiskMap()]).catch((error) => {
+  statusEl.textContent = `지도 레이어 로드 실패: ${error.message}`;
 });
