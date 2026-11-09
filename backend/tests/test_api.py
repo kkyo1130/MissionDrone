@@ -37,6 +37,27 @@ def test_environment_returns_blocked_voxel_map():
     assert result["blocked_voxels"] == np.argwhere(OCCUPANCY == 0).tolist()
 
 
+def test_3d_building_bounds_match_collision_grid():
+    """Cesium building bounds and A* obstacles must describe one city."""
+    result = client.get("/api/environment").json()
+    buildings = result["buildings"]
+    assert result["environment_kind"] == "synthetic_buildings"
+    assert len(buildings) == 4
+
+    rendered_occupancy = np.ones_like(OCCUPANCY)
+    for building in buildings:
+        lower, upper = building["min"], building["max"]
+        assert all(0 <= a < b <= size for a, b, size
+                   in zip(lower, upper, OCCUPANCY.shape))
+        rendered_occupancy[
+            lower[0]:upper[0],
+            lower[1]:upper[1],
+            lower[2]:upper[2],
+        ] = 0
+    np.testing.assert_array_equal(rendered_occupancy, OCCUPANCY)
+
+
+
 def test_risk_map_returns_voxel_units_and_free_points():
     response = client.get("/api/risk-map", params={"threshold": 0.9})
     assert response.status_code == 200
