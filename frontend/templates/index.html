@@ -157,6 +157,35 @@
       .cesium-widget-credits{opacity:.65}
       @media(max-width:760px){header{height:60px;padding:9px 12px}.header-brand h1{font-size:.8rem}.live-badge{display:none}.hud-weather{top:69px;left:12px;min-width:0;padding:9px 12px}.hud-legend{left:12px;bottom:12px;width:165px;padding:11px}.hud-metrics{right:12px;bottom:12px;width:175px;padding:11px}.hud-bottom-note{display:none}.hud-card h2{font-size:.78rem}.legend-row{font-size:.68rem}.metric-head{font-size:.66rem}.panel{top:66px;bottom:10px;left:10px}}
       @media(max-width:420px){.hud-legend{width:145px}.hud-metrics{width:155px}.weather-icon{font-size:1.2rem}.hud-value{font-size:1rem}}
+
+      /* Reference composition: compact cards over a central 3D city */
+      .hud-weather{top:84px;left:26px;min-width:260px;border-color:#29416b;background:#0d1d3cf0}
+      .hud-weather .hud-value{font-size:1.45rem}
+      .hud-legend{left:26px;bottom:26px;width:255px;padding:18px}
+      .hud-metrics{right:26px;bottom:26px;width:295px;padding:18px}
+      .hud-card h2{font-size:1rem}
+      .mission-choice{display:flex;align-items:center;gap:11px;width:100%;text-align:left;margin:9px 0 0;padding:10px 11px;border:1px solid #31517d;border-radius:10px;background:#142b51;color:#f2f6ff;font-size:.84rem;box-shadow:none;cursor:pointer}
+      .mission-choice.selected{border-color:#3c91ff;background:#193862}
+      .mission-choice[data-mission="disaster"]{border-color:#7b334d;background:#311e3b}
+      .mission-choice[data-mission="delivery"]{border-color:#78602c;background:#302c24}
+      .mission-choice-icon{display:grid;place-items:center;width:29px;height:29px;border-radius:7px;font-size:1.15rem;font-weight:700}
+      .mission-choice-icon.blue{background:#347fff}.mission-choice-icon.red{background:#f34361}.mission-choice-icon.gold{background:#f4a900}
+      .mission-choice small{margin-left:auto;border-radius:6px;padding:4px 7px;background:#ffffff18;color:#d4e1f8;font-size:.67rem}
+      .legend-counts{display:flex;justify-content:space-between;gap:8px;border-top:1px solid #294469;margin-top:14px;padding-top:12px;color:#8eacd4;font-size:.68rem}
+      .legend-counts b{color:#d7e8ff}
+      .mission-metric{border:1px solid #2a426a;background:#152442;border-radius:11px;padding:12px;margin-top:10px}
+      .mission-metric .metric-head{font-size:.83rem}.mission-metric .metric-head strong{font-size:.68rem;border-radius:6px;background:#273e61;padding:4px 6px}
+      .mission-metric p{font-size:.69rem;color:#93a9cb;margin:8px 0 0}
+      .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}.dot.blue{background:#3688ff}.dot.red{background:#ff4669}.dot.gold{background:#ffb500}
+      .simulation-tag{float:right;font-size:.64rem;color:#95b2db;font-weight:500}
+      .wind-summary{border-top:1px solid #294469;padding-top:11px;margin-top:13px;font-size:.69rem;color:#9db3d4}.wind-summary b{color:#e2efff}
+      .route-marker{position:absolute;z-index:9;top:48%;left:48%;background:#091933e8;border:1px solid #f4b422;border-radius:9px;padding:7px 12px;color:#fff;font-weight:700;font-size:.79rem;pointer-events:none;display:none}
+      .route-marker span{display:inline-grid;place-items:center;background:#f5ad08;border-radius:50%;width:23px;height:23px;margin-right:7px;color:#fff}
+      .end-marker{top:34%;left:65%}
+      .route-caption{position:absolute;z-index:9;left:50%;bottom:24px;transform:translateX(-50%);padding:9px 15px;border-radius:20px;background:#091c39e9;border:1px solid #395f8f;color:#c6defb;font-size:.75rem;pointer-events:none}
+      .hud-bottom-note{bottom:65px}
+      @media(max-width:760px){.hud-weather{left:12px;top:69px;min-width:0}.hud-legend{left:12px;bottom:12px;width:175px;padding:10px}.hud-metrics{right:12px;bottom:12px;width:190px;padding:10px}.mission-choice{font-size:.7rem;padding:7px 6px;gap:5px}.mission-choice-icon{width:22px;height:22px}.mission-metric{padding:8px}.mission-metric p{font-size:.61rem}.hud-bottom-note,.route-caption{display:none}}
+      @media(max-width:420px){.hud-legend{width:145px}.hud-metrics{width:158px}.mission-choice small{display:none}.mission-metric .metric-head{font-size:.67rem}.mission-metric .metric-head strong{font-size:.57rem}}
     </style>
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.120/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
@@ -164,7 +193,7 @@
   <body>
     <header>
       <div class="header-brand"><span class="brand-icon" aria-hidden="true">✦</span><h1>MISSIONDRONE <span style="color:#86b9ff;font-weight:500">/ 3D 관제</span></h1></div>
-      <div class="header-actions"><span class="live-badge">● 시뮬레이션 모드</span><button id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 임무 설정</button></div>
+      <div class="header-actions"><span class="live-badge">● 모의 비행 · 실시간 관제 아님</span><button id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 임무 설정</button></div>
     </header>
     <main>
       <aside class="panel" id="settingsPanel" aria-label="임무 설정 패널">
@@ -311,8 +340,20 @@
       </aside>
       <section id="viewer" aria-label="3D 드론 비행 시뮬레이션 지도"></section>
       <div class="hud-card hud-weather" aria-live="polite"><span class="weather-icon" aria-hidden="true">☁</span><div><div class="hud-kicker">SIMULATED WEATHER</div><div class="hud-value"><span id="hudWind">8.0</span> m/s</div><div class="hud-sub">풍향 <span id="hudDirection">90</span>° · 가상 기상 조건</div></div></div>
-      <div class="hud-card hud-legend"><h2>운항 위험도 레이어</h2><div class="legend-row"><span class="legend-swatch swatch-blue">▥</span> 건물·장애물 <small id="hudObstacleCount">–</small></div><div class="legend-row"><span class="legend-swatch swatch-red">▲</span> 고위험 구역 <small id="hudRiskCount">–</small></div><div class="legend-row"><span class="legend-swatch swatch-gold">⌁</span> 탐색 항로 <small id="hudRouteState">대기</small></div></div>
-      <div class="hud-card hud-metrics"><h2>비행 상태 · 시뮬레이션</h2><div class="metric"><div class="metric-head"><span>풍속 / 기준 60m/s</span><strong id="hudWindMetric">8.0 m/s</strong></div><div class="metric-track"><div class="metric-fill" id="hudWindBar" style="width:13%"></div></div></div><div class="metric"><div class="metric-head"><span>위험 복셀 수</span><strong id="hudRiskMetric">계산 중</strong></div><div class="metric-track"><div class="metric-fill red" id="hudRiskBar" style="width:0%"></div></div></div><div class="metric"><div class="metric-head"><span>항로 탐색</span><strong id="hudRouteMetric">대기</strong></div><div class="metric-track"><div class="metric-fill gold" id="hudRouteBar" style="width:0%"></div></div></div></div>
+      <div class="hud-card hud-legend"><h2>드론 임무 선택</h2>
+        <button type="button" class="mission-choice selected" data-mission="inspection"><span class="mission-choice-icon blue">▥</span><span>시설 점검</span><small id="inspectionState">선택</small></button>
+        <button type="button" class="mission-choice" data-mission="disaster"><span class="mission-choice-icon red">♨</span><span>재난 대응</span><small id="disasterState">대기</small></button>
+        <button type="button" class="mission-choice" data-mission="delivery"><span class="mission-choice-icon gold">⬡</span><span>물류 배송</span><small id="deliveryState">대기</small></button>
+        <div class="legend-counts"><span>장애물 <b id="hudObstacleCount">–</b></span><span>위험 복셀 <b id="hudRiskCount">–</b></span></div></div>
+      <div class="hud-card hud-metrics"><h2>임무별 현황 <span class="simulation-tag">시뮬레이션</span></h2>
+        <div class="mission-metric"><div class="metric-head"><span><i class="dot blue"></i> 시설 점검</span><strong id="inspectionBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill" id="inspectionBar" style="width:0%"></div></div><p id="inspectionDetail">점검 항로를 생성해 주세요</p></div>
+        <div class="mission-metric"><div class="metric-head"><span><i class="dot red"></i> 재난 대응</span><strong id="disasterBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill red" id="disasterBar" style="width:0%"></div></div><p id="disasterDetail">재난 항로를 생성해 주세요</p></div>
+        <div class="mission-metric"><div class="metric-head"><span><i class="dot gold"></i> 물류 배송</span><strong id="deliveryBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill gold" id="deliveryBar" style="width:0%"></div></div><p id="deliveryDetail">배송 항로를 생성해 주세요</p></div>
+        <div class="wind-summary">모의 풍속 <b id="hudWindMetric">8.0 m/s</b> · 위험 복셀 <b id="hudRiskMetric">계산 중</b></div>
+      </div>
+      <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
+      <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
+      <div class="route-caption" id="routeCaption" role="status">항로 탐색 대기</div>
       <div class="hud-bottom-note">합성 도시 · 모의 위험도 · 실제 비행 안전성을 보장하지 않습니다</div>
     </main>
     <script>
