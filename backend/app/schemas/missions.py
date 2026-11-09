@@ -28,6 +28,10 @@ class FlightConstraints(MissionModel):
     speed_mps: float = Field(gt=0)
     climb_rate_mps: float = Field(gt=0)
     battery_budget_wh: float = Field(gt=0)
+    clearance_m: float = Field(default=3.0, ge=0)
+    drone_radius_m: float = Field(default=1.0, gt=0)
+    position_error_m: float = Field(default=1.0, ge=0)
+    max_turn_deg: float = Field(default=135.0, gt=0, le=180)
 
     @model_validator(mode="after")
     def validate_altitude_and_climb(self) -> FlightConstraints:
@@ -35,6 +39,17 @@ class FlightConstraints(MissionModel):
             raise ValueError("min_altitude_m must be less than max_altitude_m")
         if self.climb_rate_mps > self.speed_mps:
             raise ValueError("climb_rate_mps cannot exceed speed_mps")
+        return self
+
+
+class NoFlyZone(MissionModel):
+    minimum: VoxelPoint
+    maximum: VoxelPoint
+
+    @model_validator(mode="after")
+    def validate_bounds(self) -> NoFlyZone:
+        if any(lower > upper for lower, upper in zip(self.minimum, self.maximum)):
+            raise ValueError("no-fly zone minimum must not exceed its maximum")
         return self
 
 

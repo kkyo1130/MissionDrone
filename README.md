@@ -62,9 +62,13 @@ docker-compose.yml            # 로컬 MySQL 서비스
 - `GET /api/risk-map`: 바람 조건에 따른 고위험 복셀
 - `POST /api/missions`: 임무 조건 검증 및 임무 생성
 - `GET /api/missions/{mission_id}`: 생성된 임무 조회
+- `POST /api/missions/{mission_id}/routes`: 3~5개 다중 후보 생성
+- `GET /api/missions/{mission_id}/routes`: 마지막 생성 후보 조회
 - `POST /api/route`: 시작/도착 복셀 사이의 단일 경로
 
-F02 임무 요청은 `mission_type`에 `inspection`, `disaster`, `delivery` 중 하나를 지정하고, 공통 출발·도착·경유지·필수 경유지·비행 제약·비용 가중치를 포함합니다. 시설점검은 `target_points`와 `view_distance_m`, 재난 대응은 `search_area`·`priority_points`·`time_limit_s`, 물류 배송은 `payload_kg`를 추가합니다. 복셀 좌표는 격자 인덱스 정수이며 고도 제약은 데모 grid 원점 기준 m 단위입니다. 비용 가중치 합은 1이어야 합니다. 이 API는 임무 입력 검증/저장만 하며, 경로 생성에 제약을 적용하는 기능은 후속 F03 범위입니다.
+F02 임무 요청은 `mission_type`에 `inspection`, `disaster`, `delivery` 중 하나를 지정하고, 공통 출발·도착·경유지·필수 경유지·비행 제약·비용 가중치를 포함합니다. 시설점검은 `target_points`와 `view_distance_m`, 재난 대응은 `search_area`·`priority_points`·`time_limit_s`, 물류 배송은 `payload_kg`를 추가합니다. 복셀 좌표는 격자 인덱스 정수이며 고도 제약은 데모 grid 원점 기준 m 단위입니다. 비용 가중치 합은 1이어야 합니다.
+
+F03 다중 경로 요청은 후보 수(기본 5, 허용 3~5), 위험도 산정용 바람, 선택적 금지 복셀 박스를 받습니다. 각 금지 박스의 `minimum`/`maximum`은 격자 인덱스의 양 끝을 포함합니다. 후보는 점유 복셀, 요청된 여유거리(기본 총 5 m), 고도·회전·상승률·배터리 제약을 통과해야 합니다. 선택 경유지·점검 대상·재난 탐색점을 부드러운 비용 선호도로 반영합니다. 응답은 실제 생성 개수와 부족 사유, 복셀·로컬 ENU·WGS84 좌표, 거리·시간·에너지 추정치와 위험 지표를 포함합니다. 시간·에너지 및 경로 비용은 비교용 근사치이며 실측 검증값이 아닙니다.
 
 경로 요청 예시:
 
