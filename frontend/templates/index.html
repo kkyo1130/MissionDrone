@@ -158,6 +158,18 @@
       @media(max-width:760px){header{height:60px;padding:9px 12px}.header-brand h1{font-size:.8rem}.live-badge{display:none}.hud-weather{top:69px;left:12px;min-width:0;padding:9px 12px}.hud-legend{left:12px;bottom:12px;width:165px;padding:11px}.hud-metrics{right:12px;bottom:12px;width:175px;padding:11px}.hud-bottom-note{display:none}.hud-card h2{font-size:.78rem}.legend-row{font-size:.68rem}.metric-head{font-size:.66rem}.panel{top:66px;bottom:10px;left:10px}}
       @media(max-width:420px){.hud-legend{width:145px}.hud-metrics{width:155px}.weather-icon{font-size:1.2rem}.hud-value{font-size:1rem}}
 
+      /* Compact navigation and dismissible settings drawer */
+      header{height:50px;padding:5px 16px;background:linear-gradient(180deg,rgba(5,13,30,.96),rgba(5,13,30,.55))}
+      header h1{font-size:.88rem}
+      .brand-icon{width:27px;height:27px;border-radius:8px}
+      .header-actions button{padding:6px 10px;font-size:.74rem}
+      .live-badge{padding:5px 9px;font-size:.67rem}
+      .panel{top:58px;padding-top:48px}
+      .panel-close{position:absolute;top:11px;right:11px;display:grid;place-items:center;width:30px!important;height:30px;padding:0!important;border-radius:8px;border:1px solid #425b7e!important;background:#1a3153!important;color:#e9f3ff!important;font-size:1.45rem!important;line-height:1;cursor:pointer}
+      .panel-close:hover{background:#294a75!important}
+      .settings-backdrop{position:absolute;inset:0;z-index:25;background:rgba(3,10,23,.18);display:none}
+      body.settings-open .settings-backdrop{display:block}
+      @media(max-width:760px){header{height:46px;padding:5px 10px}.panel{top:52px}.hud-weather{top:57px}.cesium-viewer-toolbar{top:58px!important}}
       /* Reference composition: compact cards over a central 3D city */
       .hud-weather{top:84px;left:26px;min-width:260px;border-color:#29416b;background:#0d1d3cf0}
       .hud-weather .hud-value{font-size:1.45rem}
@@ -210,7 +222,9 @@
       <div class="header-actions"><span class="live-badge">● 모의 비행 · 실시간 관제 아님</span><button id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">⚙ 임무 설정</button></div>
     </header>
     <main>
-      <aside class="panel" id="settingsPanel" aria-label="임무 설정 패널">
+      <div class="settings-backdrop" id="settingsBackdrop" aria-hidden="true"></div>
+      <aside class="panel" id="settingsPanel" aria-label="임무 설정 패널" aria-hidden="true">
+        <button type="button" id="closeSettings" class="panel-close" aria-label="설정 닫기" title="설정 닫기">×</button>
         <h2>임무 및 비행 조건</h2>
         <form id="missionForm">
           <div class="group">
