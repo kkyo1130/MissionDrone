@@ -7,13 +7,15 @@ from __future__ import annotations
 
 import csv
 import os
+import pickle
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.ai.wind_correction import fetch_era5
+from app.ai.wind_correction import fetch_era5, predict_wind
+from app.ai.api import MODEL_PATH
 
 router = APIRouter(prefix="/api/weather", tags=["historical weather"])
 
@@ -86,9 +88,26 @@ def historical_weather(
             raise ValueError("wind outside supported range")
     except (ValueError, KeyError, IndexError, OSError, TimeoutError) as exc:
         raise HTTPException(502, f"ERA5 data unavailable: {exc}")
-    return {
+    result = {
         "source": "Open-Meteo ERA5", "data_kind": "reanalysis",
         "timestamp_utc": key + ":00Z", "wind_speed_mps": float(speed),
         "wind_from_deg": float(direction),
+        "original_wind_speed_mps": float(speed),
+        "ai_corrected": False,
         "limitation": "ERA5 reanalysis is not a direct station observation or voxel-scale wind.",
     }
+    if MODEL_PATH.is_file():
+        try:
+            with MODEL_PATH.open("rb") as stream:
+                artifact = pickle.load(stream)  # Local trusted training output only.
+            corrected = predict_wind(artifact, float(speed), float(direction), key)
+            if not 0 <= corrected <= 60:
+                raise ValueError("Corrected speed outside supported range")
+            result["wind_speed_mps"] = corrected
+            result["ai_corrected"] = True
+            result["correction_station"] = artifact["station"]
+            result["correction_metrics"] = artifact["metrics"]
+            result["limitation"] = "AI-corrected station-level estimate; not measured urban-canyon voxel wind."
+        except (OSError, ValueError, KeyError, TypeError, pickle.UnpicklingError) as exc:
+            raise HTTPException(503, f"Trained wind model could not be applied: {exc}")
+    return result
