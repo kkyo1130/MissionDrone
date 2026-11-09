@@ -190,6 +190,14 @@
       .playback-controls{position:absolute;z-index:35;left:50%;top:84px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;background:#0a1b39ed;border:1px solid #3b5781;border-radius:12px;padding:8px;box-shadow:0 12px 30px #0005;white-space:nowrap}
       .playback-controls button{width:auto;padding:9px 11px;background:#193b6c;border:1px solid #365d94;border-radius:8px;color:#edf5ff;font-size:.78rem;cursor:pointer}
       .playback-controls button:disabled{opacity:.4;cursor:not-allowed}
+      .drone-status-panel{position:absolute;z-index:90;min-width:235px;padding:14px;background:#0b1b38f5;border:1px solid #4e83b8;border-radius:12px;color:#fff;box-shadow:0 12px 32px #0009;font-size:13px;pointer-events:auto}
+      .drone-status-panel[hidden]{display:none}
+      .drone-status-panel strong{display:flex;justify-content:space-between;gap:12px}
+      .drone-status-panel small{color:#a8c7f1;font-weight:400}
+      .drone-status-panel p{margin:9px 0;color:#dbeafe}
+      .drone-panel-actions{display:flex;gap:5px;margin-top:12px}
+      .drone-panel-actions button{flex:1;background:#193b6c;color:white;border:1px solid #365d94;border-radius:7px;padding:8px 5px;cursor:pointer;font-size:12px}
+      .drone-panel-actions button:disabled{opacity:.4;cursor:not-allowed}
       #playbackProgress{font-size:.74rem;color:#a8c7f1;padding:0 7px}
       @media(max-width:760px){.playback-controls{top:130px;left:50%;max-width:calc(100vw - 16px);gap:3px;padding:5px}.playback-controls button{font-size:.66rem;padding:6px}#playbackProgress{font-size:.63rem}}
     </style>
@@ -380,14 +388,20 @@
       <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
       <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
       <div class="playback-controls" aria-label="드론 경로 재생 제어">
-        <button id="btnStart" type="button" disabled>▶ 출발</button>
-        <button id="btnReset" type="button" disabled>↺ 리셋</button>
-        <button id="btnPause" type="button" disabled>Ⅱ 일시정지</button>
         <button id="btnFocus" type="button">⌖ 도시 확대</button>
         <span id="playbackProgress" role="status">재생 대기</span>
       </div>
       <div class="route-caption" id="routeCaption" role="status">항로 탐색 대기</div>
-      <div id="droneStatusPanel" hidden style="position:absolute;top:270px;left:50%;transform:translateX(-50%);z-index:10;background:#0b1b38;color:white;border:1px solid #4e83b8;border-radius:12px;padding:12px 16px;min-width:190px;box-shadow:0 8px 30px #0008;font-size:13px"><strong>드론 상태</strong><button id="closeDroneStatus" type="button" style="float:right;background:transparent;color:white;border:0;cursor:pointer">✕</button><p id="droneStatusText" style="margin:8px 0 0">출발 대기</p></div>
+      <div id="droneStatusPanel" hidden class="drone-status-panel" role="group" aria-label="드론 상태 및 비행 제어">
+        <strong>드론 상태 <small>모의 비행</small></strong>
+        <p id="droneStatusText">출발 대기</p>
+        <p id="droneBatteryText">예상 배터리 100%</p>
+        <div class="drone-panel-actions">
+          <button id="btnStart" type="button" disabled>▶ 출발</button>
+          <button id="btnPause" type="button" disabled>Ⅱ 일시정지</button>
+          <button id="btnReset" type="button" disabled>↺ 리셋</button>
+        </div>
+      </div>
       <div class="hud-bottom-note">합성 도시 · 모의 위험도 · 실제 비행 안전성을 보장하지 않습니다</div>
     </main>
     <script>
