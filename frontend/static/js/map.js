@@ -118,6 +118,14 @@ function renderAllCandidateRoutes(selectedIndex = 0) {
     }));
   });
 }
+function focusRoute(positions) {
+  if (!positions.length) return;
+  const bounds = Cesium.BoundingSphere.fromPoints(positions);
+  viewer.camera.flyToBoundingSphere(bounds, {
+    duration: 0.8,
+    offset: new Cesium.HeadingPitchRange(-0.8, -0.6, Math.max(bounds.radius * 3.2, 115)),
+  });
+}
 function selectCandidateRoute(index) {
   const route = candidateRoutes[index];
   if (!route) return;
@@ -127,8 +135,8 @@ function selectCandidateRoute(index) {
   }
   renderAllCandidateRoutes(index);
   const positions = route.points.map((point) => voxelToCartesian(point));
+  focusRoute(positions);
   startRoutePlayback(positions);
-  focusCity();
   document.body.classList.remove('settings-open');
   settingsToggle.setAttribute('aria-expanded', 'false');
   settingsToggle.textContent = '⚙ 임무 설정';
@@ -532,7 +540,7 @@ function startRoutePlayback(positions) {
   playbackLastFrame = performance.now();
   setPlaybackControls(true);
   pauseButton.textContent = 'Ⅱ 일시정지';
-  playbackProgress.textContent = '0%';
+  playbackProgress.textContent = '재생 0%';
   if (positions.length === 1) positions = [positions[0], positions[0]];
   addRoutePin(positions[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
   addRoutePin(positions[positions.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
@@ -543,11 +551,35 @@ function startRoutePlayback(positions) {
     distances.push(distances[i - 1] + Cesium.Cartesian3.distance(positions[i - 1], positions[i]));
   }
   const totalDistance = distances[distances.length - 1];
+  if (!Number.isFinite(totalDistance)) return;
   playbackCenter = Cesium.Cartesian3.clone(positions[0]);
   const dronePosition = new Cesium.CallbackPositionProperty(
     (_time, result) => Cesium.Cartesian3.clone(playbackCenter, result), false
   );
   makeDrone(dronePosition);
+  // Always-visible pixel-sized marker: the physical 3D drone is too small
+  // at city scale and can be occluded by thousands of risk voxels.
+  droneParts.push(viewer.entities.add({
+    name: '비행 중인 드론',
+    position: dronePosition,
+    point: {
+      pixelSize: 22,
+      color: Cesium.Color.CYAN,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 4,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+    label: {
+      text: '✈ 드론 비행 중',
+      font: 'bold 15px sans-serif',
+      fillColor: Cesium.Color.WHITE,
+      showBackground: true,
+      backgroundColor: Cesium.Color.fromCssColorString('#071329').withAlpha(0.9),
+      pixelOffset: new Cesium.Cartesian2(0, -32),
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  }));
   setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
   function frame(now) {
     if (!playbackPaused) playbackElapsed += Math.max(0, Math.min(0.1, (now - playbackLastFrame) / 1000));
@@ -559,7 +591,7 @@ function startRoutePlayback(positions) {
     const segment = distances[index] - distances[index - 1];
     const ratio = segment > 0 ? (target - distances[index - 1]) / segment : 0;
     Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, playbackCenter);
-    playbackProgress.textContent = `${Math.round(fraction * 100)}%`;
+    playbackProgress.textContent = `재생 ${Math.round(fraction * 100)}%`;
     viewer.scene.requestRender();
     if (fraction >= 1) {
       playbackFinished = true;
