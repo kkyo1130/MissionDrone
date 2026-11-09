@@ -365,9 +365,13 @@ async function findRoute() {
   });
 
   viewer.zoomTo(routeEntity);
-  setHudText('hudRouteState', `${data.path_length} 지점`);
-  setHudText('hudRouteMetric', '탐색 완료');
-  setHudWidth('hudRouteBar', 100);
+  const type = missionTypeInput.value;
+  const label = { inspection: '시설 점검', disaster: '재난 대응', delivery: '물류 배송' }[type];
+  const detail = `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`;
+  setHudText(type + 'Badge', '탐색 완료');
+  setHudText(type + 'Detail', detail);
+  setHudWidth(type + 'Bar', Math.max(4, (1 - data.average_risk) * 100));
+  setHudText('routeCaption', `${label} · ${detail}`);
   statusEl.textContent = `Path length=${data.path_length}, avg risk=${data.average_risk.toFixed(3)}, alpha=${data.alpha.toFixed(2)}`;
 }
 
@@ -381,6 +385,11 @@ document.getElementById('btnRisk').addEventListener('click', async () => {
 
 function updateMissionTypeFields() {
   const missionType = missionTypeInput.value;
+  document.querySelectorAll('.mission-choice').forEach((button) => {
+    const active = button.dataset.mission === missionType;
+    button.classList.toggle('selected', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
   const sections = [
     ['inspectionFields', 'inspection'],
     ['disasterFields', 'disaster'],
@@ -404,6 +413,15 @@ function updateMissionTypeFields() {
 }
 
 missionTypeInput.addEventListener('change', updateMissionTypeFields);
+document.querySelectorAll('.mission-choice').forEach((button) => {
+  button.addEventListener('click', () => {
+    missionTypeInput.value = button.dataset.mission;
+    updateMissionTypeFields();
+    document.body.classList.add('settings-open');
+    settingsToggle.setAttribute('aria-expanded', 'true');
+    settingsToggle.textContent = '✕ 설정 닫기';
+  });
+});
 updateMissionTypeFields();
 
 missionForm.addEventListener('submit', async (event) => {
