@@ -408,6 +408,7 @@ function makeDrone(positionProperty) {
 function startRoutePlayback(positions) {
   clearRoutePlayback();
   if (!positions.length) return;
+  if (positions.length === 1) positions = [positions[0], positions[0]];
   addRoutePin(positions[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
   addRoutePin(positions[positions.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
 
@@ -428,6 +429,7 @@ function startRoutePlayback(positions) {
     return Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, result || currentPosition);
   }, false);
   playbackStartedAt = Cesium.JulianDate.clone(viewer.clock.currentTime);
+  viewer.clock.shouldAnimate = true;
   makeDrone(dronePosition);
   setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
   playbackListener = (clock) => {
