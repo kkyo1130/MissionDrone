@@ -90,6 +90,28 @@ document.getElementById('btnFocus').addEventListener('click', focusCity);
 const origin = Cesium.Cartesian3.fromDegrees(...gridOriginWgs84);
 const enuToFixed = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
 let routeEntity = null;
+let currentMissionId = null;
+let candidateRoutes = [];
+const candidateSelect = document.getElementById('candidateSelect');
+const candidateSummary = document.getElementById('candidateSummary');
+const experimentSummary = document.getElementById('experimentSummary');
+const experimentButton = document.getElementById('btnExperiment');
+function showRoutePositions(points, detail, risk) {
+  if (routeEntity) viewer.entities.remove(routeEntity);
+  const positions = points.map((point) => voxelToCartesian(point));
+  routeEntity = viewer.entities.add({
+    polyline: { positions, width: 6, material: Cesium.Color.fromCssColorString('#ffbd18') },
+  });
+  startRoutePlayback(positions);
+  focusCity();
+  document.body.classList.remove('settings-open');
+  settingsToggle.setAttribute('aria-expanded', 'false');
+  settingsToggle.textContent = '⚙ 임무 설정';
+  const type = missionTypeInput.value;
+  setHudText(type + 'Badge', '항로 생성');
+  setHudText(type + 'Detail', detail);
+  setHudWidth(type + 'Bar', Number.isFinite(risk) ? Math.max(4, (1 - risk) * 100) : 0);
+}
 let obstacleEntities = [];
 let riskEntities = [];
 let obstacleCount = 0;
@@ -513,31 +535,7 @@ async function findRoute() {
     throw new Error(data.detail || 'Route API 요청 실패');
   }
 
-  if (routeEntity) {
-    viewer.entities.remove(routeEntity);
-  }
-  const positions = data.path.map((point) => voxelToCartesian(point));
-  routeEntity = viewer.entities.add({
-    polyline: {
-      positions,
-      width: 5,
-      material: Cesium.Color.fromCssColorString('#ffbd18'),
-    },
-  });
-
-  startRoutePlayback(positions);
-  // Keep the city and both endpoints in view throughout the playback.
-  focusCity();
-  document.body.classList.remove('settings-open');
-  settingsToggle.setAttribute('aria-expanded', 'false');
-  settingsToggle.textContent = '⚙ 임무 설정';
-  const type = missionTypeInput.value;
-  const label = { inspection: '시설 점검', disaster: '재난 대응', delivery: '물류 배송' }[type];
-  const detail = `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`;
-  setHudText(type + 'Badge', '탐색 완료');
-  setHudText(type + 'Detail', detail);
-  setHudWidth(type + 'Bar', Math.max(4, (1 - data.average_risk) * 100));
-  // The playback status is maintained by the Cesium clock listener.
+  showRoutePositions(data.path, `항로 ${data.path_length}개 지점 · 평균 위험도 ${data.average_risk.toFixed(2)}`, data.average_risk);
   statusEl.textContent = `Path length=${data.path_length}, avg risk=${data.average_risk.toFixed(3)}, alpha=${data.alpha.toFixed(2)}`;
 }
 
@@ -617,6 +615,11 @@ missionForm.addEventListener('submit', async (event) => {
       throw new Error(formatApiError(data.detail));
     }
 
+    currentMissionId = data.id;
+    candidateRoutes = [];
+    candidateSelect.innerHTML = '<option value="">후보 항로 생성 필요</option>';
+    candidateSelect.disabled = true;
+    experimentButton.disabled = true;
     startInput.value = data.start.join(',');
     endInput.value = data.end.join(',');
     missionStatusEl.textContent = `임무 저장 완료 · ${data.name} · ID ${data.id} (DB 저장)`;
@@ -637,6 +640,88 @@ showRiskInput.addEventListener('change', () => {
   riskEntities.forEach((entity) => {
     entity.show = showRiskInput.checked;
   });
+});
+
+
+document.getElementById('btnCandidates').addEventListener('click', async () => {
+  if (!currentMissionId) {
+    candidateSummary.textContent = '먼저 임무를 저장해 주세요.';
+    return;
+  }
+  const button = document.getElementById('btnCandidates');
+  button.disabled = true;
+  candidateSummary.textContent = '임무 조건에 따른 후보 항로 생성 중...';
+  try {
+    const response = await fetch(`/api/missions/${currentMissionId}/routes`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        count: 3,
+        wind_speed: Number(windSpeedInput.value),
+        wind_direction: Number(windDirectionInput.value),
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(formatApiError(result.detail));
+    candidateRoutes = result.routes;
+    candidateSelect.innerHTML = '';
+    candidateRoutes.forEach((route, index) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = `후보 ${index + 1} · ${route.distance_m.toFixed(0)}m · 위험 ${route.average_risk.toFixed(2)} · ${route.estimated_energy_wh.toFixed(1)}Wh`;
+      candidateSelect.appendChild(option);
+    });
+    candidateSelect.disabled = !candidateRoutes.length;
+    experimentButton.disabled = !candidateRoutes.length;
+    candidateSummary.textContent = `${result.generated_count}개 생성 · ${result.reason || '후보를 선택해 비행을 재생하세요.'}`;
+    if (candidateRoutes.length) candidateSelect.dispatchEvent(new Event('change'));
+  } catch (error) {
+    candidateSummary.textContent = `후보 생성 실패: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});
+candidateSelect.addEventListener('change', () => {
+  const route = candidateRoutes[Number(candidateSelect.value)];
+  if (!route) return;
+  showRoutePositions(route.points, `후보 항로 · ${route.distance_m.toFixed(0)}m · ${route.estimated_time_s.toFixed(0)}초 · ${route.estimated_energy_wh.toFixed(1)}Wh`, route.average_risk);
+});
+experimentButton.addEventListener('click', async () => {
+  if (!currentMissionId || !candidateRoutes.length) return;
+  experimentButton.disabled = true;
+  experimentSummary.textContent = '약풍·중풍·강풍 시나리오를 반복 시뮬레이션하는 중...';
+  try {
+    const response = await fetch(`/api/missions/${currentMissionId}/experiments`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        weather: [
+          {name:'약풍',wind_speed_mps:2,wind_from_deg:90},
+          {name:'중풍',wind_speed_mps:8,wind_from_deg:90},
+          {name:'강풍',wind_speed_mps:15,wind_from_deg:90},
+        ],
+        repeats: 2, seed: 42,
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(formatApiError(result.detail));
+    const recommended = result.evaluation?.recommended_route_id;
+    const index = candidateRoutes.findIndex((route) => route.id === recommended);
+    if (index >= 0) {
+      candidateSelect.value = String(index);
+      candidateSelect.dispatchEvent(new Event('change'));
+    }
+    experimentSummary.innerHTML = '';
+    const message = document.createElement('div');
+    message.textContent = `${result.runs.length}회 모의 비행 저장 · ${recommended ? '안전 조건을 통과한 추천 후보 표시' : '안전 조건을 만족하는 추천 항로 없음'}`;
+    const exportLink = document.createElement('a');
+    exportLink.href = `/api/experiments/${encodeURIComponent(result.id)}/export?format=csv`;
+    exportLink.textContent = ' · CSV 데이터 다운로드';
+    exportLink.style.color = '#91c2ff';
+    experimentSummary.append(message, exportLink);
+  } catch (error) {
+    experimentSummary.textContent = `시뮬레이션 실패: ${error.message}`;
+  } finally {
+    experimentButton.disabled = false;
+  }
 });
 
 document.getElementById('btnRoute').addEventListener('click', async () => {
