@@ -710,12 +710,16 @@ candidateSelect.addEventListener('change', () => {
 experimentButton.addEventListener('click', async () => {
   if (!currentMissionId || !candidateRoutes.length) return;
   experimentButton.disabled = true;
-  experimentSummary.textContent = '약풍·중풍·강풍 시나리오를 반복 시뮬레이션하는 중...';
+  experimentSummary.textContent = activeWeatherProvenance ? '선택한 과거 기상 조건으로 반복 시뮬레이션 중...' : '약풍·중풍·강풍 시나리오를 반복 시뮬레이션하는 중...';
   try {
     const response = await fetch(`/api/missions/${currentMissionId}/experiments`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        weather: [
+        weather: activeWeatherProvenance ? [
+          {name: activeWeatherProvenance.source + ' ' + activeWeatherProvenance.timestamp_utc,
+           wind_speed_mps: Number(windSpeedInput.value),
+           wind_from_deg: Number(windDirectionInput.value)},
+        ] : [
           {name:'약풍',wind_speed_mps:2,wind_from_deg:90},
           {name:'중풍',wind_speed_mps:8,wind_from_deg:90},
           {name:'강풍',wind_speed_mps:15,wind_from_deg:90},
@@ -787,6 +791,7 @@ historicalWeatherButton.addEventListener('click', async () => {
 });
 
 windSpeedInput.addEventListener('change', () => {
+  activeWeatherProvenance = null;
   const speed = Number(windSpeedInput.value);
   if (Number.isFinite(speed) && speed >= 0 && speed <= 60) {
     currentWindSpeed = speed;
@@ -794,6 +799,7 @@ windSpeedInput.addEventListener('change', () => {
   }
 });
 windDirectionInput.addEventListener('change', () => {
+  activeWeatherProvenance = null;
   const direction = Number(windDirectionInput.value);
   if (Number.isFinite(direction) && direction >= 0 && direction <= 360) {
     currentWindDirection = direction;
