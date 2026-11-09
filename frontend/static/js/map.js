@@ -709,10 +709,20 @@ missionForm.addEventListener('submit', async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(formatApiError(data.detail));
+    const responseText = await response.text();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      if (!response.ok) {
+        throw new Error(`서버 오류 (HTTP ${response.status}). 백엔드 터미널의 오류 로그를 확인해 주세요. ${responseText.slice(0, 120)}`);
+      }
+      throw new Error('서버가 올바른 JSON 응답을 반환하지 않았습니다.');
     }
+    if (!response.ok) {
+      throw new Error(formatApiError(data.detail) || `임무 저장 실패 (HTTP ${response.status})`);
+    }
+    if (!data.id) throw new Error('서버 응답에 임무 ID가 없습니다.');
 
     currentMissionId = data.id;
     clearCandidateRouteEntities();
