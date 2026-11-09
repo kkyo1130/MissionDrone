@@ -59,11 +59,34 @@ const viewer = new Cesium.Viewer('viewer', {
   geocoder: false,
   sceneModePicker: false,
   baseLayerPicker: false,
-  baseLayer: gridSpec.cesiumIonToken ? undefined : false,
+  // Keep an actual Cesium globe behind the synthetic test city.
+  // OSM imagery does not require an Ion token; fall back to a plain globe
+  // when a tile service is unavailable.
+  baseLayer: false,
   terrainProvider: new Cesium.EllipsoidTerrainProvider(),
 });
 
 viewer.scene.globe.depthTestAgainstTerrain = false;
+viewer.scene.globe.show = true;
+viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#193f62');
+viewer.scene.skyAtmosphere.show = true;
+viewer.scene.fog.enabled = true;
+viewer.scene.globe.enableLighting = false;
+// A public imagery layer supplies geographical context without changing
+// the local ENU voxel coordinates used by collision checks and route planning.
+try {
+  const streetTiles = new Cesium.UrlTemplateImageryProvider({
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    credit: '© OpenStreetMap contributors',
+    maximumLevel: 19,
+  });
+  viewer.imageryLayers.addImageryProvider(streetTiles);
+  streetTiles.errorEvent.addEventListener((error) => {
+    console.warn('Map imagery is unavailable; using the simulated globe.', error);
+  });
+} catch (error) {
+  console.warn('Could not initialise background imagery:', error);
+}
 // Frame the actual simulated city instead of viewing it from 3 km away.
 const cityCenterLocal = new Cesium.Cartesian3(
   gridSpec.shape[0] * gridSpec.voxelSizeM / 2,
