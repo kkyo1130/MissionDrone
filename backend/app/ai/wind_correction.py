@@ -89,8 +89,10 @@ def train(X: np.ndarray, y: np.ndarray, timestamps: list[str], station: str) -> 
     if len(y) < 100:
         raise ValueError("At least 100 paired hourly records are required")
     split = int(len(y) * 0.8)
-    if timestamps[split - 1][:10] == timestamps[split][:10]:
-        raise ValueError("Train/test split falls within one day; use a longer date range")
+    while split < len(y) and timestamps[split - 1][:10] == timestamps[split][:10]:
+        split += 1
+    if split >= len(y) or split < 50:
+        raise ValueError("Need observations spanning multiple days for a chronological holdout")
     model = RandomForestRegressor(n_estimators=120, min_samples_leaf=5, random_state=42, n_jobs=-1)
     model.fit(X[:split], y[:split])
     baseline = X[split:, 0]
