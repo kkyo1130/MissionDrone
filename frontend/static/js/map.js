@@ -1,4 +1,34 @@
 const statusEl = document.getElementById('status');
+const settingsToggle = document.getElementById('toggleSettings');
+settingsToggle.addEventListener('click', () => {
+  const opened = document.body.classList.toggle('settings-open');
+  settingsToggle.setAttribute('aria-expanded', String(opened));
+  settingsToggle.textContent = opened ? '✕ 설정 닫기' : '⚙ 임무 설정';
+});
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && document.body.classList.contains('settings-open')) {
+    settingsToggle.click();
+  }
+});
+function setHudText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+function setHudWidth(id, percentage) {
+  const element = document.getElementById(id);
+  if (element) element.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
+}
+function refreshHud() {
+  setHudText('hudWind', currentWindSpeed.toFixed(1));
+  setHudText('hudDirection', String(currentWindDirection));
+  setHudText('hudWindMetric', `${currentWindSpeed.toFixed(1)} m/s`);
+  setHudText('hudObstacleCount', `${obstacleCount.toLocaleString()}개`);
+  setHudText('hudRiskCount', `${riskCount.toLocaleString()}개`);
+  setHudText('hudRiskMetric', `${riskCount.toLocaleString()}개`);
+  setHudWidth('hudWindBar', currentWindSpeed / 60 * 100);
+  setHudWidth('hudRiskBar', obstacleCount + riskCount ? riskCount / (obstacleCount + riskCount) * 100 : 0);
+}
+
 const startInput = document.getElementById('start');
 const endInput = document.getElementById('end');
 const windSpeedInput = document.getElementById('windSpeed');
@@ -219,6 +249,7 @@ function updateLayerStatus() {
   statusEl.textContent =
     `장애물 ${obstacleCount} 복셀 · 위험도 ${riskCount} 복셀 · ` +
     `풍속 ${currentWindSpeed} m/s · 풍향 ${currentWindDirection}°`;
+  refreshHud();
 }
 
 async function loadEnvironment() {
@@ -334,6 +365,9 @@ async function findRoute() {
   });
 
   viewer.zoomTo(routeEntity);
+  setHudText('hudRouteState', `${data.path_length} 지점`);
+  setHudText('hudRouteMetric', '탐색 완료');
+  setHudWidth('hudRouteBar', 100);
   statusEl.textContent = `Path length=${data.path_length}, avg risk=${data.average_risk.toFixed(3)}, alpha=${data.alpha.toFixed(2)}`;
 }
 
@@ -401,9 +435,7 @@ missionForm.addEventListener('submit', async (event) => {
 
     startInput.value = data.start.join(',');
     endInput.value = data.end.join(',');
-    missionStatusEl.textContent =
-      `임무 저장 완료 · ${data.name} · ID ${data.id} ` +
-      '(메모리 저장: 서버 재시작 시 초기화)';
+    missionStatusEl.textContent = `임무 저장 완료 · ${data.name} · ID ${data.id} (DB 저장)`;
   } catch (error) {
     missionStatusEl.textContent = `임무 저장 실패: ${error.message}`;
   } finally {
@@ -430,6 +462,22 @@ document.getElementById('btnRoute').addEventListener('click', async () => {
     statusEl.textContent = error.message;
   }
 });
+
+windSpeedInput.addEventListener('change', () => {
+  const speed = Number(windSpeedInput.value);
+  if (Number.isFinite(speed) && speed >= 0 && speed <= 60) {
+    currentWindSpeed = speed;
+    refreshHud();
+  }
+});
+windDirectionInput.addEventListener('change', () => {
+  const direction = Number(windDirectionInput.value);
+  if (Number.isFinite(direction) && direction >= 0 && direction <= 360) {
+    currentWindDirection = direction;
+    refreshHud();
+  }
+});
+refreshHud();
 
 Promise.all([loadEnvironment(), loadRiskMap()]).catch((error) => {
   statusEl.textContent = `지도 레이어 로드 실패: ${error.message}`;
