@@ -328,7 +328,12 @@
         <button id="btnCreateMission" type="submit">임무 저장</button>
         <div id="missionStatus" role="status" aria-live="polite"></div>
         </form>
-        <button id="btnRoute" type="button">Find Route</button>
+        <button id="btnRoute" type="button">Find Route (빠른 항로)</button>
+        <button id="btnCandidates" type="button" class="secondary">후보 항로 3~5개 생성</button>
+        <div class="group"><label for="candidateSelect">후보 항로 선택</label><select id="candidateSelect" disabled><option value="">임무 저장 후 후보 생성</option></select></div>
+        <div id="candidateSummary" class="mission-help" role="status"></div>
+        <button id="btnExperiment" type="button" class="secondary" disabled>기상 조건별 반복 시뮬레이션</button>
+        <div id="experimentSummary" class="mission-help" role="status"></div>
         <button id="btnRisk" class="secondary" type="button">Load Risk Voxels</button>
         <h2>지도 레이어</h2>
         <label class="layer-control">
