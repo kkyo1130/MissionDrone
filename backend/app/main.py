@@ -14,6 +14,7 @@ from urllib.request import Request as UrlRequest, urlopen
 from urllib.parse import urlencode
 from urllib.error import URLError
 from datetime import datetime, timezone
+from urllib.error import HTTPError
 
 import numpy as np
 from dotenv import load_dotenv
@@ -230,13 +231,13 @@ def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
              f'(way["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f});'
              f'relation["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f}););out geom;')
     req = UrlRequest(
-        "https://overpass-api.de/api/interpreter",
+        os.getenv("OSM_OVERPASS_URL", "https://overpass.kumi.systems/api/interpreter"),
         data=urlencode({"data": query}).encode("utf-8"),
         headers={"User-Agent": "MissionDrone-University-Simulation/1.0"},
         method="POST",
     )
     try:
-        with urlopen(req, timeout=45) as response:
+        with urlopen(req, timeout=12) as response:
             raw = json.load(response)
     except (URLError, TimeoutError, ValueError, OSError) as exc:
         raise HTTPException(status_code=503, detail=f"OSM building service unavailable: {exc}") from exc
@@ -272,6 +273,17 @@ def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
     GRID_ORIGIN_WGS84 = origin
     OSM_BUILDINGS = buildings
     ENVIRONMENT_KIND = "osm_buildings"
+    # Cache the exact same OSM geometry used for display and voxelization.
+    cache_path = Path(__file__).resolve().parent.parent / "data" / "osm_songdo_cache.json"
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = cache_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"center_lon": payload.center_lon,
+                                   "center_lat": payload.center_lat,
+                                   "buildings": buildings}, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(cache_path)
+    except OSError:
+        pass  # Read-only deployments can still use the in-memory environment.
     MISSIONS.clear()
     ROUTE_RESULTS.clear()
     return {
@@ -286,15 +298,37 @@ def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
 
 @app.on_event("startup")
 def initialize_osm_city() -> None:
-    """Never show mock buildings: initialize the real OSM city on startup.
+    """Start quickly using a previously downloaded real OSM dataset, if present.
 
-    If the public provider is unavailable, startup fails visibly instead of
-    silently planning flights through an empty or synthetic city.
+    Never block server startup on a remote Overpass request and never use
+    synthetic buildings as a fallback. Use the import button for first load.
     """
-    load_osm_environment(OsmEnvironmentRequest(
-        center_lon=float(os.getenv("OSM_CENTER_LON", "126.645")),
-        center_lat=float(os.getenv("OSM_CENTER_LAT", "37.385")),
-    ))
+    global OCCUPANCY, GRID_ORIGIN_WGS84, OSM_BUILDINGS, ENVIRONMENT_KIND
+    cache_path = Path(__file__).resolve().parent.parent / "data" / "osm_songdo_cache.json"
+    if not cache_path.exists():
+        ENVIRONMENT_KIND = "osm_unavailable"
+        print("OSM cache missing: server ready; import real Songdo buildings in the UI.")
+        return
+    try:
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
+        buildings = data["buildings"]
+        center_lon = float(data["center_lon"])
+        center_lat = float(data["center_lat"])
+        half_x = GRID_SPEC.width * GRID_SPEC.voxel_size_m / 2
+        half_y = GRID_SPEC.depth * GRID_SPEC.voxel_size_m / 2
+        origin = (center_lon - half_x / (111320 * cos(radians(center_lat))),
+                  center_lat - half_y / 111132, 0.0)
+        occupancy = voxelize_osm_buildings(GRID_SPEC, origin, buildings)
+        if not buildings or not np.any(occupancy == 0):
+            raise ValueError("Cached OSM buildings contain no usable obstacles")
+        OCCUPANCY = occupancy
+        GRID_ORIGIN_WGS84 = origin
+        OSM_BUILDINGS = buildings
+        ENVIRONMENT_KIND = "osm_buildings"
+        print(f"Loaded {len(buildings)} real OSM buildings from local cache.")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        ENVIRONMENT_KIND = "osm_unavailable"
+        print(f"OSM cache invalid: {exc}. Re-import real buildings in the UI.")
 
 
 @app.get("/api/environment")
