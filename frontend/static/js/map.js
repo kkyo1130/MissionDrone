@@ -463,7 +463,11 @@ async function loadEnvironment() {
     label.textContent = 'OSM 실건물 ' + data.buildings.length + '개 · 점유 복셀 ' +
       data.blocked_voxels.length + '개 · 미등록 건물/높이 추정 주의';
   } else {
-    throw new Error('실제 송도 OSM 건물 데이터가 준비되지 않았습니다. 가상 건물로 대체하지 않습니다.');
+    const label = document.getElementById('osmImportStatus');
+    label.textContent = 'OSM 건물 데이터 없음 · 위의 “선택 범위 실제 3D 건물 적용” 버튼으로 가져오세요. 가상 건물은 표시하지 않습니다.';
+    obstacleCount = 0;
+    updateLayerStatus();
+    return;
   }
   obstacleEntities.forEach((entity) => { entity.show = showObstaclesInput.checked; });
   obstacleCount = data.blocked_voxels.length;
