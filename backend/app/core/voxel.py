@@ -72,6 +72,12 @@ def voxelize_osm_buildings(spec: GridSpec, origin: tuple[float, float, float],
     def segments_cross(a, b, c, d) -> bool:
         def turn(p, q, t):
             return (q[0] - p[0]) * (t[1] - p[1]) - (q[1] - p[1]) * (t[0] - p[0])
+        # Collinear but separated edges must not block unrelated voxels.
+        if (max(a[0], b[0]) < min(c[0], d[0]) or
+                max(c[0], d[0]) < min(a[0], b[0]) or
+                max(a[1], b[1]) < min(c[1], d[1]) or
+                max(c[1], d[1]) < min(a[1], b[1])):
+            return False
         return turn(a, b, c) * turn(a, b, d) <= 0 and turn(c, d, a) * turn(c, d, b) <= 0
 
     for building in buildings:
