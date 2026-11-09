@@ -233,6 +233,21 @@
           <label for="windDirection">Wind Direction (degrees)</label>
           <input id="windDirection" type="number" min="0" max="360" step="1" value="90" />
         </div>
+        <div class="group">
+          <label for="historicalWeatherAt">과거 기상 적용 시각 (UTC)</label>
+          <input id="historicalWeatherAt" type="datetime-local" value="2024-07-01T12:00" />
+        </div>
+        <div class="group">
+          <label for="historicalWeatherSource">기상 데이터 출처</label>
+          <select id="historicalWeatherSource">
+            <option value="noaa">NOAA 관측소 실측</option>
+            <option value="era5">ERA5 재분석 (관측 아님)</option>
+          </select>
+        </div>
+        <div class="group">
+          <button id="btnApplyHistoricalWeather" type="button">과거 기상 데이터 적용</button>
+          <p id="historicalWeatherStatus" class="mission-help" role="status">현재는 수동 설정한 모의 풍속·풍향을 사용합니다.</p>
+        </div>
         <div class="mission-section">
           <h3>경유지</h3>
           <div class="group">
