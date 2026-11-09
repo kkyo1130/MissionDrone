@@ -1,13 +1,21 @@
 const statusEl = document.getElementById('status');
 const settingsToggle = document.getElementById('toggleSettings');
-settingsToggle.addEventListener('click', () => {
-  const opened = document.body.classList.toggle('settings-open');
+const settingsPanel = document.getElementById('settingsPanel');
+const closeSettingsButton = document.getElementById('closeSettings');
+const settingsBackdrop = document.getElementById('settingsBackdrop');
+function setSettingsOpen(opened) {
+  document.body.classList.toggle('settings-open', opened);
   settingsToggle.setAttribute('aria-expanded', String(opened));
-  settingsToggle.textContent = opened ? '✕ 설정 닫기' : '⚙ 임무 설정';
-});
+  settingsPanel.setAttribute('aria-hidden', String(!opened));
+  if (opened) closeSettingsButton.focus();
+}
+settingsToggle.addEventListener('click', () => setSettingsOpen(true));
+closeSettingsButton.addEventListener('click', () => setSettingsOpen(false));
+settingsBackdrop.addEventListener('click', () => setSettingsOpen(false));
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && document.body.classList.contains('settings-open')) {
-    settingsToggle.click();
+    setSettingsOpen(false);
+    settingsToggle.focus();
   }
 });
 function setHudText(id, value) {
@@ -161,9 +169,7 @@ function selectCandidateRoute(index) {
   selectedRouteEnergyWh = Number(route.estimated_energy_wh);
   focusRoute(positions);
   prepareRoutePlayback(positions);
-  document.body.classList.remove('settings-open');
-  settingsToggle.setAttribute('aria-expanded', 'false');
-  settingsToggle.textContent = '⚙ 임무 설정';
+  setSettingsOpen(false);
   const type = missionTypeInput.value;
   setHudText(type + 'Badge', '항로 생성');
   setHudText(type + 'Detail',
@@ -186,9 +192,7 @@ function showRoutePositions(points, detail, risk) {
   });
   prepareRoutePlayback(positions);
   focusCity();
-  document.body.classList.remove('settings-open');
-  settingsToggle.setAttribute('aria-expanded', 'false');
-  settingsToggle.textContent = '⚙ 임무 설정';
+  setSettingsOpen(false);
   const type = missionTypeInput.value;
   setHudText(type + 'Badge', '항로 생성');
   setHudText(type + 'Detail', detail);
@@ -841,9 +845,7 @@ document.querySelectorAll('.mission-choice').forEach((button) => {
   button.addEventListener('click', () => {
     missionTypeInput.value = button.dataset.mission;
     updateMissionTypeFields();
-    document.body.classList.add('settings-open');
-    settingsToggle.setAttribute('aria-expanded', 'true');
-    settingsToggle.textContent = '✕ 설정 닫기';
+    setSettingsOpen(true);
   });
 });
 updateMissionTypeFields();
