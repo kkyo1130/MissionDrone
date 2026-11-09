@@ -228,7 +228,7 @@ def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
     origin = (west, south, 0.0)
     query = (f'[out:json][timeout:30];'
              f'(way["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f});'
-             f'relation["building"]({south:.7f},{west:.7f},{north:.7f}););out geom;')
+             f'relation["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f}););out geom;')
     req = UrlRequest(
         "https://overpass-api.de/api/interpreter",
         data=urlencode({"data": query}).encode("utf-8"),
