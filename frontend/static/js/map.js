@@ -92,11 +92,59 @@ const enuToFixed = Cesium.Transforms.eastNorthUpToFixedFrame(origin);
 let routeEntity = null;
 let currentMissionId = null;
 let candidateRoutes = [];
+let candidateRouteEntities = [];
+const candidateRouteColors = ['#32b7f5', '#b78aff', '#40d4ac', '#ff8c75', '#d7dce8'];
+function clearCandidateRouteEntities() {
+  for (const entity of candidateRouteEntities) viewer.entities.remove(entity);
+  candidateRouteEntities = [];
+}
+function renderAllCandidateRoutes(selectedIndex = 0) {
+  clearCandidateRouteEntities();
+  // Draw every candidate simultaneously; the selected route is yellow and wider.
+  candidateRoutes.forEach((route, index) => {
+    const selected = index === selectedIndex;
+    const positions = route.points.map((point) => voxelToCartesian(point));
+    candidateRouteEntities.push(viewer.entities.add({
+      name: '후보 항로 ' + (index + 1),
+      polyline: {
+        positions,
+        width: selected ? 8 : 4,
+        material: Cesium.Color.fromCssColorString(
+          selected ? '#ffbd18' : candidateRouteColors[index % candidateRouteColors.length]
+        ).withAlpha(selected ? 1 : 0.75),
+        clampToGround: false,
+      },
+    }));
+  });
+}
+function selectCandidateRoute(index) {
+  const route = candidateRoutes[index];
+  if (!route) return;
+  if (routeEntity) {
+    viewer.entities.remove(routeEntity);
+    routeEntity = null;
+  }
+  renderAllCandidateRoutes(index);
+  const positions = route.points.map((point) => voxelToCartesian(point));
+  startRoutePlayback(positions);
+  focusCity();
+  document.body.classList.remove('settings-open');
+  settingsToggle.setAttribute('aria-expanded', 'false');
+  settingsToggle.textContent = '⚙ 임무 설정';
+  const type = missionTypeInput.value;
+  setHudText(type + 'Badge', '항로 생성');
+  setHudText(type + 'Detail',
+    '선택 후보 ' + (index + 1) + ' · ' + route.distance_m.toFixed(0) + 'm · ' +
+    route.estimated_time_s.toFixed(0) + '초 · ' + route.estimated_energy_wh.toFixed(1) + 'Wh');
+  setHudWidth(type + 'Bar',
+    Number.isFinite(route.average_risk) ? Math.max(4, (1 - route.average_risk) * 100) : 0);
+}
 const candidateSelect = document.getElementById('candidateSelect');
 const candidateSummary = document.getElementById('candidateSummary');
 const experimentSummary = document.getElementById('experimentSummary');
 const experimentButton = document.getElementById('btnExperiment');
 function showRoutePositions(points, detail, risk) {
+  clearCandidateRouteEntities();
   if (routeEntity) viewer.entities.remove(routeEntity);
   const positions = points.map((point) => voxelToCartesian(point));
   routeEntity = viewer.entities.add({
@@ -630,6 +678,7 @@ missionForm.addEventListener('submit', async (event) => {
     }
 
     currentMissionId = data.id;
+    clearCandidateRouteEntities();
     candidateRoutes = [];
     candidateSelect.innerHTML = '<option value="">후보 항로 생성 필요</option>';
     candidateSelect.disabled = true;
@@ -676,6 +725,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(formatApiError(result.detail));
+    clearCandidateRouteEntities();
     candidateRoutes = result.routes || [];
     if (!candidateRoutes.length) {
       candidateSelect.innerHTML = '<option value="">생성 가능한 항로 없음</option>';
@@ -693,7 +743,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
     });
     candidateSelect.disabled = !candidateRoutes.length;
     experimentButton.disabled = !candidateRoutes.length;
-    candidateSummary.textContent = `${result.generated_count}개 생성 · ${result.reason || '후보를 선택해 비행을 재생하세요.'}`;
+    candidateSummary.textContent = `${result.generated_count}개 항로를 동시에 표시 중 · 선택한 항로는 노란색 · ${result.reason || '후보를 선택하면 해당 항로를 재생합니다.'}`;
     if (candidateRoutes.length) candidateSelect.dispatchEvent(new Event('change'));
   } catch (error) {
     candidateSummary.textContent = `후보 생성 실패: ${error.message}`;
@@ -705,7 +755,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
 candidateSelect.addEventListener('change', () => {
   const route = candidateRoutes[Number(candidateSelect.value)];
   if (!route) return;
-  showRoutePositions(route.points, `후보 항로 · ${route.distance_m.toFixed(0)}m · ${route.estimated_time_s.toFixed(0)}초 · ${route.estimated_energy_wh.toFixed(1)}Wh`, route.average_risk);
+  selectCandidateRoute(Number(candidateSelect.value));
 });
 experimentButton.addEventListener('click', async () => {
   if (!currentMissionId || !candidateRoutes.length) return;
