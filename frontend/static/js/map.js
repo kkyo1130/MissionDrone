@@ -40,7 +40,8 @@ const missionTypeInput = document.getElementById('missionType');
 const missionStatusEl = document.getElementById('missionStatus');
 const createMissionButton = document.getElementById('btnCreateMission');
 const gridSpec = window.APP_GRID_SPEC;
-const riskThreshold = 0.7;
+// Visualization threshold only; routing always uses the full risk map.
+const riskDisplayThreshold = (speed) => Math.min(0.7, Math.max(0.04, speed / 8 * 0.35));
 const gridOriginWgs84 = gridSpec.originWgs84;
 const missionWeightDefaults = {
   inspection: [0.2, 0.35, 0.25, 0.2],
@@ -370,7 +371,7 @@ async function loadRiskMap() {
   const params = new URLSearchParams({
     wind_speed: windSpeedInput.value,
     wind_direction: windDirectionInput.value,
-    threshold: String(riskThreshold),
+    threshold: String(riskDisplayThreshold(Number(windSpeedInput.value))),
   });
   const response = await fetch(`/api/risk-map?${params}`);
   const data = await response.json();
