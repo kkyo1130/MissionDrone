@@ -49,6 +49,23 @@
         border: 1px solid rgba(18, 38, 29, 0.25);
         background: #fff;
       }
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid rgba(18, 38, 29, 0.25);
+        border-radius: 10px;
+        background: #fff;
+      }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .form-grid .group { min-width: 0; }
+      .mission-section { margin: 14px 0; }
+      .mission-section h3 { margin: 12px 0 8px; font-size: 0.9rem; }
+      .mission-help { margin: 4px 0 10px; font-size: 0.76rem; color: #53645b; }
+      #missionStatus {
+        margin-top: 8px;
+        font-size: 0.82rem;
+        overflow-wrap: anywhere;
+      }
       .layer-control {
         display: flex;
         align-items: center;
@@ -102,6 +119,19 @@
     <main>
       <aside class="panel">
         <h2>Scenario Input</h2>
+        <form id="missionForm">
+          <div class="group">
+            <label for="missionName">임무 이름</label>
+            <input id="missionName" maxlength="100" value="시연 임무" required />
+          </div>
+          <div class="group">
+            <label for="missionType">임무 유형</label>
+            <select id="missionType">
+              <option value="inspection">시설점검</option>
+              <option value="disaster">재난 대응</option>
+              <option value="delivery" selected>물류 배송</option>
+            </select>
+          </div>
         <div class="group">
           <label for="start">Start (x,y,z)</label>
           <input id="start" value="2,2,6" />
@@ -118,8 +148,103 @@
           <label for="windDirection">Wind Direction (degrees)</label>
           <input id="windDirection" type="number" min="0" max="360" step="1" value="90" />
         </div>
-        <button id="btnRoute">Find Route</button>
-        <button id="btnRisk" class="secondary">Load Risk Voxels</button>
+        <div class="mission-section">
+          <h3>경유지</h3>
+          <div class="group">
+            <label for="waypoints">선택 경유지 (x,y,z)</label>
+            <input id="waypoints" placeholder="예: 10,10,6; 15,15,7" />
+          </div>
+          <div class="group">
+            <label for="requiredWaypoints">필수 경유지 (x,y,z)</label>
+            <input id="requiredWaypoints" placeholder="예: 10,10,6" />
+          </div>
+          <p class="mission-help">여러 지점은 세미콜론(;)으로 구분합니다.</p>
+        </div>
+        <div class="mission-section">
+          <h3>비행 제약</h3>
+          <div class="form-grid">
+            <div class="group">
+              <label for="minAltitude">최소 고도 (m)</label>
+              <input id="minAltitude" type="number" min="0" max="120" step="1" value="10" required />
+            </div>
+            <div class="group">
+              <label for="maxAltitude">최대 고도 (m)</label>
+              <input id="maxAltitude" type="number" min="1" max="120" step="1" value="100" required />
+            </div>
+            <div class="group">
+              <label for="speed">속도 (m/s)</label>
+              <input id="speed" type="number" min="0.1" step="0.1" value="12" required />
+            </div>
+            <div class="group">
+              <label for="climbRate">상승률 (m/s)</label>
+              <input id="climbRate" type="number" min="0.1" step="0.1" value="3" required />
+            </div>
+          </div>
+          <div class="group">
+            <label for="batteryBudget">배터리 예산 (Wh)</label>
+            <input id="batteryBudget" type="number" min="0.1" step="0.1" value="180" required />
+          </div>
+        </div>
+        <div class="mission-section">
+          <h3>비용 가중치 (합계 1)</h3>
+          <div class="form-grid">
+            <div class="group">
+              <label for="weightDistance">거리</label>
+              <input id="weightDistance" type="number" min="0" max="1" step="0.05" value="0.25" required />
+            </div>
+            <div class="group">
+              <label for="weightRisk">위험</label>
+              <input id="weightRisk" type="number" min="0" max="1" step="0.05" value="0.25" required />
+            </div>
+            <div class="group">
+              <label for="weightTime">시간</label>
+              <input id="weightTime" type="number" min="0" max="1" step="0.05" value="0.25" required />
+            </div>
+            <div class="group">
+              <label for="weightEnergy">에너지</label>
+              <input id="weightEnergy" type="number" min="0" max="1" step="0.05" value="0.25" required />
+            </div>
+          </div>
+          <p class="mission-help">임무 유형별 초기 추천값이며 실제 최적 가중치는 검증되지 않았습니다.</p>
+        </div>
+        <div class="mission-section" id="inspectionFields" hidden>
+          <h3>시설점검 조건</h3>
+          <div class="group">
+            <label for="targetPoints">점검 대상 지점 (x,y,z)</label>
+            <input id="targetPoints" placeholder="예: 6,6,2" />
+          </div>
+          <div class="group">
+            <label for="viewDistance">시야 거리 (m)</label>
+            <input id="viewDistance" type="number" min="0.1" step="0.1" value="15" />
+          </div>
+        </div>
+        <div class="mission-section" id="disasterFields" hidden>
+          <h3>재난 대응 조건</h3>
+          <div class="group">
+            <label for="searchArea">탐색 구역 지점 (x,y,z)</label>
+            <input id="searchArea" placeholder="예: 10,10,6; 12,12,6" />
+          </div>
+          <div class="group">
+            <label for="priorityPoints">우선 수색 지점 (x,y,z)</label>
+            <input id="priorityPoints" placeholder="예: 12,12,6" />
+          </div>
+          <div class="group">
+            <label for="timeLimit">제한 시간 (초)</label>
+            <input id="timeLimit" type="number" min="0.1" step="0.1" value="900" />
+          </div>
+        </div>
+        <div class="mission-section" id="deliveryFields" hidden>
+          <h3>물류 배송 조건</h3>
+          <div class="group">
+            <label for="payload">탑재 중량 (kg)</label>
+            <input id="payload" type="number" min="0" step="0.1" value="2.5" />
+          </div>
+        </div>
+        <button id="btnCreateMission" type="submit">임무 저장</button>
+        <div id="missionStatus" role="status" aria-live="polite"></div>
+        </form>
+        <button id="btnRoute" type="button">Find Route</button>
+        <button id="btnRisk" class="secondary" type="button">Load Risk Voxels</button>
         <h2>지도 레이어</h2>
         <label class="layer-control">
           <input id="showObstacles" type="checkbox" checked />

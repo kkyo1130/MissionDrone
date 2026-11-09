@@ -5,9 +5,18 @@ const windSpeedInput = document.getElementById('windSpeed');
 const windDirectionInput = document.getElementById('windDirection');
 const showObstaclesInput = document.getElementById('showObstacles');
 const showRiskInput = document.getElementById('showRisk');
+const missionForm = document.getElementById('missionForm');
+const missionTypeInput = document.getElementById('missionType');
+const missionStatusEl = document.getElementById('missionStatus');
+const createMissionButton = document.getElementById('btnCreateMission');
 const gridSpec = window.APP_GRID_SPEC;
 const riskThreshold = 0.7;
 const gridOriginWgs84 = gridSpec.originWgs84;
+const missionWeightDefaults = {
+  inspection: [0.2, 0.35, 0.25, 0.2],
+  disaster: [0.15, 0.3, 0.4, 0.15],
+  delivery: [0.25, 0.25, 0.25, 0.25],
+};
 
 if (gridSpec.cesiumIonToken) {
   Cesium.Ion.defaultAccessToken = gridSpec.cesiumIonToken;
@@ -44,15 +53,152 @@ let currentWindSpeed = Number(windSpeedInput.value);
 let currentWindDirection = Number(windDirectionInput.value);
 
 function parsePoint(text) {
-  const parts = text.split(',').map((value) => Number(value.trim()));
+  const rawParts = text.split(',').map((value) => value.trim());
+  const parts = rawParts.map((value) => Number(value));
   if (
     parts.length !== 3 ||
+    rawParts.some((value) => value === '') ||
     parts.some((value) => !Number.isInteger(value)) ||
     parts.some((value, index) => value < 0 || value >= gridSpec.shape[index])
   ) {
     throw new Error('좌표는 격자 범위 안의 정수 x,y,z 형식이어야 합니다.');
   }
   return parts;
+}
+
+function parsePoints(text) {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(';').map((point) => parsePoint(point.trim())) : [];
+}
+
+function readNumber(id, label) {
+  const rawValue = document.getElementById(id).value.trim();
+  const value = Number(rawValue);
+  if (rawValue === '' || !Number.isFinite(value)) {
+    throw new Error(`${label}을(를) 숫자로 입력하세요.`);
+  }
+  return value;
+}
+
+function buildMissionRequest() {
+  const missionType = missionTypeInput.value;
+  const start = parsePoint(startInput.value);
+  const end = parsePoint(endInput.value);
+  const waypoints = parsePoints(document.getElementById('waypoints').value);
+  const requiredWaypoints = parsePoints(
+    document.getElementById('requiredWaypoints').value,
+  );
+  const costWeights = {
+    distance: readNumber('weightDistance', '거리 가중치'),
+    risk: readNumber('weightRisk', '위험 가중치'),
+    time: readNumber('weightTime', '시간 가중치'),
+    energy: readNumber('weightEnergy', '에너지 가중치'),
+  };
+  const weightValues = Object.values(costWeights);
+  if (
+    weightValues.some((value) => value < 0 || value > 1) ||
+    Math.abs(weightValues.reduce((sum, value) => sum + value, 0) - 1) > 1e-6
+  ) {
+    throw new Error('비용 가중치는 각각 0~1이며 합계가 1이어야 합니다.');
+  }
+
+  const constraints = {
+    min_altitude_m: readNumber('minAltitude', '최소 고도'),
+    max_altitude_m: readNumber('maxAltitude', '최대 고도'),
+    speed_mps: readNumber('speed', '속도'),
+    climb_rate_mps: readNumber('climbRate', '상승률'),
+    battery_budget_wh: readNumber('batteryBudget', '배터리 예산'),
+  };
+  if (
+    constraints.min_altitude_m < 0 ||
+    constraints.max_altitude_m > gridSpec.shape[2] * gridSpec.voxelSizeM ||
+    constraints.min_altitude_m >= constraints.max_altitude_m ||
+    constraints.speed_mps <= 0 ||
+    constraints.climb_rate_mps <= 0 ||
+    constraints.climb_rate_mps > constraints.speed_mps ||
+    constraints.battery_budget_wh <= 0
+  ) {
+    throw new Error('고도, 속도, 상승률 또는 배터리 예산 범위를 확인하세요.');
+  }
+  for (const point of [start, end, ...waypoints]) {
+    const altitude = (point[2] + 0.5) * gridSpec.voxelSizeM;
+    if (
+      altitude < constraints.min_altitude_m ||
+      altitude > constraints.max_altitude_m
+    ) {
+      throw new Error('출발·도착·경유지 고도가 임무 고도 범위 밖입니다.');
+    }
+  }
+  if (
+    requiredWaypoints.some(
+      (required) => !waypoints.some(
+        (waypoint) =>
+          waypoint.every((value, index) => value === required[index]),
+      ),
+    )
+  ) {
+    throw new Error('필수 경유지는 선택 경유지에도 포함해야 합니다.');
+  }
+
+  const payload = {
+    mission_type: missionType,
+    name: document.getElementById('missionName').value.trim(),
+    start,
+    end,
+    waypoints,
+    required_waypoints: requiredWaypoints,
+    constraints,
+    cost_weights: costWeights,
+  };
+  if (!payload.name) {
+    throw new Error('임무 이름을 입력하세요.');
+  }
+
+  if (missionType === 'inspection') {
+    payload.target_points = parsePoints(
+      document.getElementById('targetPoints').value,
+    );
+    payload.view_distance_m = readNumber('viewDistance', '시야 거리');
+    if (payload.target_points.length === 0 || payload.view_distance_m <= 0) {
+      throw new Error('점검 지점과 양수 시야 거리를 입력하세요.');
+    }
+  } else if (missionType === 'disaster') {
+    payload.search_area = parsePoints(
+      document.getElementById('searchArea').value,
+    );
+    payload.priority_points = parsePoints(
+      document.getElementById('priorityPoints').value,
+    );
+    payload.time_limit_s = readNumber('timeLimit', '제한 시간');
+    if (payload.search_area.length === 0 || payload.time_limit_s <= 0) {
+      throw new Error('탐색 지점과 양수 제한 시간을 입력하세요.');
+    }
+    if (
+      payload.priority_points.some(
+        (priority) =>
+          !payload.search_area.some((point) =>
+            point.every((value, index) => value === priority[index]),
+          ),
+      )
+    ) {
+      throw new Error('우선 수색 지점은 탐색 구역에 포함해야 합니다.');
+    }
+  } else {
+    payload.payload_kg = readNumber('payload', '탑재 중량');
+    if (payload.payload_kg < 0) {
+      throw new Error('탑재 중량은 0 이상이어야 합니다.');
+    }
+  }
+  return payload;
+}
+
+function formatApiError(detail) {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => `${item.loc.slice(1).join('.')}: ${item.msg}`)
+      .join('; ');
+  }
+  return detail || '임무 API 요청 실패';
 }
 
 function voxelToCartesian([x, y, z]) {
@@ -196,6 +342,72 @@ document.getElementById('btnRisk').addEventListener('click', async () => {
     await loadRiskMap();
   } catch (error) {
     statusEl.textContent = error.message;
+  }
+});
+
+function updateMissionTypeFields() {
+  const missionType = missionTypeInput.value;
+  const sections = [
+    ['inspectionFields', 'inspection'],
+    ['disasterFields', 'disaster'],
+    ['deliveryFields', 'delivery'],
+  ];
+  sections.forEach(([id, type]) => {
+    const section = document.getElementById(id);
+    const active = missionType === type;
+    section.hidden = !active;
+    section.querySelectorAll('input').forEach((input) => {
+      input.disabled = !active;
+    });
+  });
+
+  const defaults = missionWeightDefaults[missionType];
+  ['weightDistance', 'weightRisk', 'weightTime', 'weightEnergy'].forEach(
+    (id, index) => {
+      document.getElementById(id).value = defaults[index];
+    },
+  );
+}
+
+missionTypeInput.addEventListener('change', updateMissionTypeFields);
+updateMissionTypeFields();
+
+missionForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!missionForm.reportValidity()) {
+    return;
+  }
+
+  let payload;
+  try {
+    payload = buildMissionRequest();
+  } catch (error) {
+    missionStatusEl.textContent = error.message;
+    return;
+  }
+
+  createMissionButton.disabled = true;
+  missionStatusEl.textContent = '임무 저장 중...';
+  try {
+    const response = await fetch('/api/missions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(formatApiError(data.detail));
+    }
+
+    startInput.value = data.start.join(',');
+    endInput.value = data.end.join(',');
+    missionStatusEl.textContent =
+      `임무 저장 완료 · ${data.name} · ID ${data.id} ` +
+      '(메모리 저장: 서버 재시작 시 초기화)';
+  } catch (error) {
+    missionStatusEl.textContent = `임무 저장 실패: ${error.message}`;
+  } finally {
+    createMissionButton.disabled = false;
   }
 });
 
