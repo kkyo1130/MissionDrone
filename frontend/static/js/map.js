@@ -553,33 +553,31 @@ function startRoutePlayback(positions) {
   const totalDistance = distances[distances.length - 1];
   if (!Number.isFinite(totalDistance)) return;
   playbackCenter = Cesium.Cartesian3.clone(positions[0]);
-  const dronePosition = new Cesium.CallbackPositionProperty(
-    (_time, result) => Cesium.Cartesian3.clone(playbackCenter, result), false
-  );
-  makeDrone(dronePosition);
-  // Always-visible pixel-sized marker: the physical 3D drone is too small
-  // at city scale and can be occluded by thousands of risk voxels.
-  droneParts.push(viewer.entities.add({
+  // Use a regular Cesium entity and update its position on each animation frame.
+  // This avoids version-dependent callback position classes and keeps playback
+  // functional even if the optional 3D drone rendering is unavailable.
+  const droneMarker = viewer.entities.add({
     name: '비행 중인 드론',
-    position: dronePosition,
+    position: Cesium.Cartesian3.clone(playbackCenter),
     point: {
-      pixelSize: 22,
+      pixelSize: 24,
       color: Cesium.Color.CYAN,
       outlineColor: Cesium.Color.WHITE,
       outlineWidth: 4,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
     label: {
-      text: '✈ 드론 비행 중',
+      text: '드론 비행 중',
       font: 'bold 15px sans-serif',
       fillColor: Cesium.Color.WHITE,
       showBackground: true,
       backgroundColor: Cesium.Color.fromCssColorString('#071329').withAlpha(0.9),
-      pixelOffset: new Cesium.Cartesian2(0, -32),
+      pixelOffset: new Cesium.Cartesian2(0, -34),
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
-  }));
+  });
+  droneParts.push(droneMarker);
   setHudText('routeCaption', '드론 경로 재생 중 · 모의 비행');
   function frame(now) {
     if (!playbackPaused) playbackElapsed += Math.max(0, Math.min(0.1, (now - playbackLastFrame) / 1000));
@@ -591,6 +589,7 @@ function startRoutePlayback(positions) {
     const segment = distances[index] - distances[index - 1];
     const ratio = segment > 0 ? (target - distances[index - 1]) / segment : 0;
     Cesium.Cartesian3.lerp(positions[index - 1], positions[index], ratio, playbackCenter);
+    droneMarker.position = Cesium.Cartesian3.clone(playbackCenter);
     playbackProgress.textContent = `재생 ${Math.round(fraction * 100)}%`;
     viewer.scene.requestRender();
     if (fraction >= 1) {
