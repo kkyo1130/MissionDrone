@@ -40,8 +40,8 @@ const missionTypeInput = document.getElementById('missionType');
 const missionStatusEl = document.getElementById('missionStatus');
 const createMissionButton = document.getElementById('btnCreateMission');
 const gridSpec = window.APP_GRID_SPEC;
-// Visualization threshold only; routing always uses the full risk map.
-const riskDisplayThreshold = (speed) => Math.min(0.7, Math.max(0.04, speed / 8 * 0.35));
+// Show low-risk voxels too; the route planner always uses the full risk map.
+const riskDisplayThreshold = 0.01;
 const gridOriginWgs84 = gridSpec.originWgs84;
 const missionWeightDefaults = {
   inspection: [0.2, 0.35, 0.25, 0.2],
@@ -371,7 +371,7 @@ async function loadRiskMap() {
   const params = new URLSearchParams({
     wind_speed: windSpeedInput.value,
     wind_direction: windDirectionInput.value,
-    threshold: String(riskDisplayThreshold(Number(windSpeedInput.value))),
+    threshold: String(riskDisplayThreshold),
   });
   const response = await fetch(`/api/risk-map?${params}`);
   const data = await response.json();
@@ -380,9 +380,17 @@ async function loadRiskMap() {
   }
 
   clearRisk();
-  const lowRiskColor = Cesium.Color.fromCssColorString('#ffd166');
-  const highRiskColor = Cesium.Color.fromCssColorString('#d00000');
+  // Absolute risk scale: green (low) -> yellow (medium) -> red (high).
+  // Do not normalize by the displayed voxels' maximum: that would make
+  // low-wind conditions look artificially dangerous.
+  const lowRiskColor = Cesium.Color.fromCssColorString('#22c55e');
+  const mediumRiskColor = Cesium.Color.fromCssColorString('#facc15');
+  const highRiskColor = Cesium.Color.fromCssColorString('#ef4444');
   for (const point of data.points) {
+    const risk = Math.max(0, Math.min(1, Number(point.risk)));
+    const color = risk <= 0.5
+      ? Cesium.Color.lerp(lowRiskColor, mediumRiskColor, risk * 2, new Cesium.Color())
+      : Cesium.Color.lerp(mediumRiskColor, highRiskColor, (risk - 0.5) * 2, new Cesium.Color());
     riskEntities.push(viewer.entities.add({
       position: voxelToCartesian([point.x, point.y, point.z]),
       box: {
@@ -391,12 +399,7 @@ async function loadRiskMap() {
           data.voxel_size_m,
           data.voxel_size_m,
         ),
-        material: Cesium.Color.lerp(
-          lowRiskColor,
-          highRiskColor,
-          point.risk,
-          new Cesium.Color(),
-        ).withAlpha(0.35 + point.risk * 0.55),
+        material: color.withAlpha(0.3 + risk * 0.55),
         outline: false,
       },
       show: showRiskInput.checked,
