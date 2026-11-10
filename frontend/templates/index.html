@@ -259,11 +259,11 @@
         </div>
         <div class="group">
           <label for="windSpeed">Wind Speed (m/s)</label>
-          <input id="windSpeed" type="number" min="0" max="60" step="any" value="8" />
+          <input id="windSpeed" type="number" min="0" max="60" step="any" placeholder="NOAA 조회 또는 직접 입력" />
         </div>
         <div class="group">
           <label for="windDirection">Wind Direction (degrees)</label>
-          <input id="windDirection" type="number" min="0" max="360" step="any" value="90" />
+          <input id="windDirection" type="number" min="0" max="360" step="any" placeholder="NOAA 조회 또는 직접 입력" />
         </div>
         <div class="group">
           <label for="historicalWeatherAt">과거 기상 적용 시각 (UTC)</label>
@@ -419,7 +419,7 @@
         <div class="mission-metric"><div class="metric-head"><span><i class="dot blue"></i> 시설 점검</span><strong id="inspectionBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill" id="inspectionBar" style="width:0%"></div></div><p id="inspectionDetail">점검 항로를 생성해 주세요</p></div>
         <div class="mission-metric"><div class="metric-head"><span><i class="dot red"></i> 재난 대응</span><strong id="disasterBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill red" id="disasterBar" style="width:0%"></div></div><p id="disasterDetail">재난 항로를 생성해 주세요</p></div>
         <div class="mission-metric"><div class="metric-head"><span><i class="dot gold"></i> 물류 배송</span><strong id="deliveryBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill gold" id="deliveryBar" style="width:0%"></div></div><p id="deliveryDetail">배송 항로를 생성해 주세요</p></div>
-        <div class="wind-summary">모의 풍속 <b id="hudWindMetric">8.0 m/s</b> · 위험 복셀 <b id="hudRiskMetric">계산 중</b></div>
+        <div class="wind-summary">적용 풍속 <b id="hudWindMetric">미적용</b> · 위험 복셀 <b id="hudRiskMetric">계산 중</b></div>
       </div>
       <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
       <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
