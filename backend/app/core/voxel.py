@@ -7,8 +7,8 @@ import numpy as np
 
 @dataclass(frozen=True)
 class GridSpec:
-    width: int = 32
-    depth: int = 32
+    width: int = 80
+    depth: int = 80
     height: int = 36
     voxel_size_m: int = 10
 
