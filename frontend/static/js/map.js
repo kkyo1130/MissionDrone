@@ -474,7 +474,8 @@ async function loadEnvironment() {
     }
     return;
   }
-  obstacleEntities.forEach((entity) => { entity.show = showObstaclesInput.checked; });
+  // Real OSM building meshes are the city itself, not optional voxel overlays.
+  obstacleEntities.forEach((entity) => { entity.show = true; });
   obstacleCount = data.blocked_voxels.length;
   updateLayerStatus();
 }
@@ -913,9 +914,8 @@ missionForm.addEventListener('submit', async (event) => {
 });
 
 showObstaclesInput.addEventListener('change', () => {
-  obstacleEntities.forEach((entity) => {
-    entity.show = showObstaclesInput.checked;
-  });
+  // This switch must never hide the actual OSM 3D city buildings.
+  // Reserved for optional voxel obstacle overlays.
 });
 
 showRiskInput.addEventListener('change', () => {
