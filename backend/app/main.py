@@ -574,9 +574,9 @@ class PointCheckRequest(BaseModel):
     point: Tuple[int, int, int]
     min_altitude_m: float = 0
     max_altitude_m: float = 360
-    clearance_m: float = 0
-    drone_radius_m: float = 0
-    position_error_m: float = 0
+    clearance_m: float = Field(default=3.0, ge=0)
+    drone_radius_m: float = Field(default=1.0, ge=0)
+    position_error_m: float = Field(default=1.0, ge=0)
 
 
 @app.post("/api/points/check")
