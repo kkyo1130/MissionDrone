@@ -378,7 +378,11 @@
           <input id="osmCenterLon" type="number" min="126.60" max="126.70" step="0.00001" value="126.645" /></div>
         <div class="group"><label for="osmCenterLat">중심 위도</label>
           <input id="osmCenterLat" type="number" min="37.34" max="37.43" step="0.00001" value="37.385" /></div>
-        <button type="button" id="btnOsmBuildings" class="secondary">선택 범위 실제 3D 건물 적용</button>
+        <div class="group"><label for="localBuildingsFile">로컬 OSM 건물 GeoJSON 파일</label>
+          <input id="localBuildingsFile" type="file" accept=".geojson,.json,application/geo+json,application/json" /></div>
+        <button type="button" id="btnLocalBuildings" class="secondary">로컬 건물 파일 저장 및 3D 적용</button>
+        <p class="mission-help">OSM에서 내보낸 건물 Polygon GeoJSON을 한 번 등록하면 backend/data/songdo_buildings.geojson에 저장되어 다음 실행부터 인터넷 없이 로딩됩니다.</p>
+                <button type="button" id="btnOsmBuildings" class="secondary">선택 범위 실제 3D 건물 적용</button>
         <p class="mission-help" id="osmImportStatus" role="status">OSM 공개 건물 데이터 · 높이 미등록 시 추정값 사용 · 실제 비행 안전 검증 불가</p>
         <h2>지도 레이어</h2>
         <label class="layer-control">
