@@ -9,7 +9,7 @@ import numpy as np
 class GridSpec:
     width: int = 32
     depth: int = 32
-    height: int = 12
+    height: int = 36
     voxel_size_m: int = 10
 
 
