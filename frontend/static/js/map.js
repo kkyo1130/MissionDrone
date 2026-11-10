@@ -210,6 +210,8 @@ let currentWindDirection = windDirectionInput.value.trim() ? Number(windDirectio
 // clicks on extruded buildings resolve to a stable ground footprint.
 let activeMapPick = null;
 const pickedMarkers = {start: null, end: null};
+const selectedBuildings = {start: null, end: null};
+const buildingEntities = new Map();
 const pointChecks = {start: null, end: null};
 const pointCheckSerial = {start: 0, end: 0};
 const routeButtons = ['btnRoute', 'btnCandidates'].map(id => document.getElementById(id));
@@ -555,6 +557,7 @@ function renderOsmBuilding(building, index) {
     description: 'OSM 건물 · 높이 ' + building.height_m + 'm (' +
       (building.height_source === 'tagged_height' ? 'OSM 높이 태그' : '추정 높이') + ')',
   });
+  buildingEntities.set(entity.id, building);
   obstacleEntities.push(entity);
 }
 
@@ -624,6 +627,7 @@ async function loadEnvironment() {
 
   obstacleEntities.forEach((entity) => viewer.entities.remove(entity));
   obstacleEntities = [];
+  buildingEntities.clear();
   if (data.environment_kind === 'osm_buildings') {
     cityGroundEntities.forEach((entity) => viewer.entities.remove(entity));
     cityGroundEntities = [];
