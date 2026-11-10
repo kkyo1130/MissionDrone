@@ -214,6 +214,115 @@ def _osm_height(tags: dict) -> tuple[float, float, str]:
     return min(300.0, max(2.0, height)), max(0.0, minimum), source
 
 
+LOCAL_BUILDINGS_PATH = REPOSITORY_ROOT / "backend" / "data" / "songdo_buildings.geojson"
+
+
+def _local_geojson_buildings(document: dict) -> list[dict]:
+    """Read real OSM-derived GeoJSON polygons (no invented footprints)."""
+    if document.get("type") != "FeatureCollection" or not isinstance(document.get("features"), list):
+        raise ValueError("Expected GeoJSON FeatureCollection with polygon features")
+    buildings = []
+    for index, feature in enumerate(document["features"]):
+        if not isinstance(feature, dict):
+            continue
+        geometry = feature.get("geometry") or {}
+        if geometry.get("type") not in ("Polygon", "MultiPolygon"):
+            continue
+        props = feature.get("properties") or {}
+        if not isinstance(props, dict):
+            continue
+        if props.get("building") in (None, "no") and props.get("building:part") in (None, "no"):
+            continue
+        polygons = ([geometry["coordinates"]] if geometry["type"] == "Polygon"
+                    else geometry["coordinates"])
+        height, minimum, source = _osm_height(props)
+        for part_index, polygon in enumerate(polygons):
+            if not polygon or not isinstance(polygon[0], list):
+                continue
+            ring = polygon[0]  # Exterior ring; holes require separate treatment.
+            try:
+                coords = [[float(pt[0]), float(pt[1])] for pt in ring]
+            except (TypeError, ValueError, IndexError):
+                continue
+            if len(coords) >= 4 and coords[0] == coords[-1]:
+                coords.pop()
+            if len(coords) < 3 or not all(
+                126.0 <= lon <= 127.5 and 36.5 <= lat <= 38.5 for lon, lat in coords
+            ):
+                continue
+            buildings.append({
+                "id": str(feature.get("id") or props.get("@id") or f"local-{index}") + f"-{part_index}",
+                "name": str(props.get("name") or f"OSM 건물 {index + 1}"),
+                "coordinates": coords,
+                "height_m": height,
+                "min_height_m": minimum,
+                "height_source": source,
+            })
+    if not buildings:
+        raise ValueError("No valid OSM building polygons in GeoJSON (building tag required)")
+    return buildings
+
+
+def _activate_local_buildings(buildings: list[dict], center_lon: float, center_lat: float) -> dict:
+    global OCCUPANCY, GRID_ORIGIN_WGS84, OSM_BUILDINGS, ENVIRONMENT_KIND
+    half_x = GRID_SPEC.width * GRID_SPEC.voxel_size_m / 2
+    half_y = GRID_SPEC.depth * GRID_SPEC.voxel_size_m / 2
+    origin = (
+        center_lon - half_x / (111320 * cos(radians(center_lat))),
+        center_lat - half_y / 111132,
+        0.0,
+    )
+    grid = voxelize_osm_buildings(GRID_SPEC, origin, buildings)
+    if not np.any(grid == 0):
+        raise ValueError("No building footprints intersect the 320m study area; adjust center coordinates")
+    OCCUPANCY = grid
+    GRID_ORIGIN_WGS84 = origin
+    OSM_BUILDINGS = buildings
+    ENVIRONMENT_KIND = "osm_buildings"
+    MISSIONS.clear()
+    ROUTE_RESULTS.clear()
+    return {
+        "environment_kind": ENVIRONMENT_KIND,
+        "buildings_count": len(buildings),
+        "blocked_voxels_count": int(np.count_nonzero(grid == 0)),
+        "origin_wgs84": list(origin),
+        "height_estimates": sum(b["height_source"] != "tagged_height" for b in buildings),
+        "source": "local_geojson",
+    }
+
+
+class LocalEnvironmentRequest(OsmEnvironmentRequest):
+    geojson: dict
+
+
+@app.post("/api/environment/local")
+def import_local_environment(payload: LocalEnvironmentRequest) -> Dict[str, Any]:
+    """Import real building GeoJSON once, persist it, and reuse it offline."""
+    try:
+        buildings = _local_geojson_buildings(payload.geojson)
+        # Validate before writing so an invalid file never replaces a working dataset.
+        half_x = GRID_SPEC.width * GRID_SPEC.voxel_size_m / 2
+        half_y = GRID_SPEC.depth * GRID_SPEC.voxel_size_m / 2
+        origin = (
+            payload.center_lon - half_x / (111320 * cos(radians(payload.center_lat))),
+            payload.center_lat - half_y / 111132, 0.0,
+        )
+        if not np.any(voxelize_osm_buildings(GRID_SPEC, origin, buildings) == 0):
+            raise ValueError("No building footprints intersect the 320m study area")
+        LOCAL_BUILDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = LOCAL_BUILDINGS_PATH.with_suffix(".tmp")
+        tmp.write_text(json.dumps({
+            "type": "FeatureCollection",
+            "center_lon": payload.center_lon,
+            "center_lat": payload.center_lat,
+            "features": payload.geojson["features"],
+        }, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(LOCAL_BUILDINGS_PATH)
+        return _activate_local_buildings(buildings, payload.center_lon, payload.center_lat)
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
 @app.post("/api/environment/osm")
 def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
     """Load real OSM footprints into Cesium and the same routing voxel grid."""
@@ -327,6 +436,17 @@ def initialize_osm_city() -> None:
     synthetic buildings as a fallback. Use the import button for first load.
     """
     global OCCUPANCY, GRID_ORIGIN_WGS84, OSM_BUILDINGS, ENVIRONMENT_KIND
+    if LOCAL_BUILDINGS_PATH.exists():
+        try:
+            document = json.loads(LOCAL_BUILDINGS_PATH.read_text(encoding="utf-8"))
+            buildings = _local_geojson_buildings(document)
+            center_lon = float(document.get("center_lon", 126.645))
+            center_lat = float(document.get("center_lat", 37.385))
+            result = _activate_local_buildings(buildings, center_lon, center_lat)
+            print(f"Loaded {result['buildings_count']} real buildings from local GeoJSON.")
+            return
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            print(f"Local building GeoJSON invalid: {exc}")
     cache_path = Path(__file__).resolve().parent.parent / "data" / "osm_songdo_cache.json"
     if not cache_path.exists():
         ENVIRONMENT_KIND = "osm_unavailable"
