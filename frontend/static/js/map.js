@@ -27,13 +27,13 @@ function setHudWidth(id, percentage) {
   if (element) element.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
 }
 function refreshHud() {
-  setHudText('hudWind', currentWindSpeed.toFixed(1));
-  setHudText('hudDirection', String(currentWindDirection));
-  setHudText('hudWindMetric', `${currentWindSpeed.toFixed(1)} m/s`);
+  setHudText('hudWind', Number.isFinite(currentWindSpeed) ? currentWindSpeed.toFixed(1) : '미적용');
+  setHudText('hudDirection', Number.isFinite(currentWindDirection) ? String(currentWindDirection) : '미적용');
+  setHudText('hudWindMetric', Number.isFinite(currentWindSpeed) ? `${currentWindSpeed.toFixed(1)} m/s` : '미적용');
   setHudText('hudObstacleCount', `${obstacleCount.toLocaleString()}개`);
   setHudText('hudRiskCount', `${riskCount.toLocaleString()}개`);
   setHudText('hudRiskMetric', `${riskCount.toLocaleString()}개`);
-  setHudWidth('hudWindBar', currentWindSpeed / 60 * 100);
+  setHudWidth('hudWindBar', Number.isFinite(currentWindSpeed) ? currentWindSpeed / 60 * 100 : 0);
   setHudWidth('hudRiskBar', obstacleCount + riskCount ? riskCount / (obstacleCount + riskCount) * 100 : 0);
 }
 
@@ -203,8 +203,8 @@ let cityGroundEntities = [];
 let riskEntities = [];
 let obstacleCount = 0;
 let riskCount = 0;
-let currentWindSpeed = Number(windSpeedInput.value);
-let currentWindDirection = Number(windDirectionInput.value);
+let currentWindSpeed = windSpeedInput.value.trim() ? Number(windSpeedInput.value) : NaN;
+let currentWindDirection = windDirectionInput.value.trim() ? Number(windDirectionInput.value) : NaN;
 
 // Click-to-pick route endpoints. Pick longitude/latitude on the ellipsoid so
 // clicks on extruded buildings resolve to a stable ground footprint.
@@ -579,6 +579,9 @@ async function loadEnvironment() {
 }
 
 async function loadRiskMap() {
+  if (!windSpeedInput.value.trim() || !windDirectionInput.value.trim()) {
+    throw new Error('NOAA 기상 데이터를 적용하거나 풍속·풍향을 직접 입력한 후 위험도를 계산하세요.');
+  }
   const params = new URLSearchParams({
     wind_speed: windSpeedInput.value,
     wind_direction: windDirectionInput.value,
@@ -1180,7 +1183,9 @@ historicalWeatherButton.addEventListener('click', async () => {
 
 windSpeedInput.addEventListener('change', () => {
   activeWeatherProvenance = null;
-  const speed = Number(windSpeedInput.value);
+  const speed = windSpeedInput.value.trim() ? Number(windSpeedInput.value) : NaN;
+  currentWindSpeed = speed;
+  refreshHud();
   if (Number.isFinite(speed) && speed >= 0 && speed <= 60) {
     currentWindSpeed = speed;
     refreshHud();
@@ -1188,7 +1193,9 @@ windSpeedInput.addEventListener('change', () => {
 });
 windDirectionInput.addEventListener('change', () => {
   activeWeatherProvenance = null;
-  const direction = Number(windDirectionInput.value);
+  const direction = windDirectionInput.value.trim() ? Number(windDirectionInput.value) : NaN;
+  currentWindDirection = direction;
+  refreshHud();
   if (Number.isFinite(direction) && direction >= 0 && direction <= 360) {
     currentWindDirection = direction;
     refreshHud();
@@ -1196,6 +1203,6 @@ windDirectionInput.addEventListener('change', () => {
 });
 refreshHud();
 
-Promise.all([loadEnvironment(), loadRiskMap()]).catch((error) => {
+loadEnvironment().catch((error) => {
   statusEl.textContent = `지도 레이어 로드 실패: ${error.message}`;
 });
