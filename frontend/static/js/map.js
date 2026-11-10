@@ -407,8 +407,8 @@ function renderOsmBuilding(building, index) {
     name: building.name,
     polygon: {
       hierarchy: Cesium.Cartesian3.fromDegreesArray(hierarchy),
-      height: Number(building.min_height_m) || 0,
-      extrudedHeight: Number(building.height_m),
+      height: Number(building.height_m),
+      extrudedHeight: Number(building.min_height_m) || 0,
       material: Cesium.Color.fromCssColorString(color).withAlpha(0.92),
       outline: true,
       outlineColor: Cesium.Color.fromCssColorString('#273d52'),
