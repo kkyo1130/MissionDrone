@@ -48,7 +48,7 @@ load_dotenv(REPOSITORY_ROOT / ".env")
 
 GRID_SPEC = GridSpec()
 OCCUPANCY = np.ones((GRID_SPEC.width, GRID_SPEC.depth, GRID_SPEC.height), dtype=np.int8)
-GRID_ORIGIN_WGS84 = (126.6432, 37.3836, 0.0)
+GRID_ORIGIN_WGS84 = (126.64239, 37.38786, 0.0)
 OSM_BUILDINGS: list[dict] = []
 ENVIRONMENT_KIND = 'osm_unavailable'
 PointInput = Tuple[StrictInt, StrictInt, StrictInt]
@@ -192,8 +192,8 @@ def health() -> Dict[str, str]:
 
 
 class OsmEnvironmentRequest(BaseModel):
-    center_lon: float = Field(default=126.645, ge=126.60, le=126.70)
-    center_lat: float = Field(default=37.385, ge=37.34, le=37.43)
+    center_lon: float = Field(default=126.6442, ge=126.60, le=126.70)
+    center_lat: float = Field(default=37.3893, ge=37.34, le=37.43)
 
 
 def _osm_height(tags: dict) -> tuple[float, float, str]:
@@ -440,8 +440,8 @@ def initialize_osm_city() -> None:
         try:
             document = json.loads(LOCAL_BUILDINGS_PATH.read_text(encoding="utf-8"))
             buildings = _local_geojson_buildings(document)
-            center_lon = float(document.get("center_lon", 126.645))
-            center_lat = float(document.get("center_lat", 37.385))
+            center_lon = float(document.get("center_lon", 126.6442))
+            center_lat = float(document.get("center_lat", 37.3893))
             result = _activate_local_buildings(buildings, center_lon, center_lat)
             print(f"Loaded {result['buildings_count']} real buildings from local GeoJSON.")
             return
