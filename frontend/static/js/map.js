@@ -228,15 +228,25 @@ pickEndButton.addEventListener('click', () => setMapPickMode('end'));
 document.getElementById('btnCancelPick').addEventListener('click', () => setMapPickMode(null));
 mapPickHandler.setInputAction((event) => {
   if (!activeMapPick) return;
-  const ray = viewer.camera.getPickRay(event.position);
-  const hit = ray && viewer.scene.globe.pick(ray, viewer.scene);
-  const cartographic = hit && Cesium.Cartographic.fromCartesian(hit);
-  if (!cartographic) {
-    mapPickStatus.textContent = '지도 표면을 선택할 수 없습니다. 다른 위치를 클릭하세요.';
+  // Pick the visible building/terrain surface when available. Unlike globe.pick,
+  // pickPosition preserves the horizontal location of a clicked 3D building.
+  // Fall back to the ellipsoid for imagery/empty-ground clicks.
+  let hit;
+  const pickedObject = viewer.scene.pick(event.position);
+  if (Cesium.defined(pickedObject) && viewer.scene.pickPositionSupported) {
+    try { hit = viewer.scene.pickPosition(event.position); } catch (error) { /* fallback */ }
+  }
+  if (!Cesium.defined(hit)) {
+    hit = viewer.camera.pickEllipsoid(event.position, viewer.scene.globe.ellipsoid);
+  }
+  if (!Cesium.defined(hit)) {
+    mapPickStatus.textContent = '위치를 확인할 수 없습니다. 건물이나 지면을 다시 클릭하세요.';
     return;
   }
+  const cartographic = Cesium.Cartographic.fromCartesian(hit);
   const longitude = Cesium.Math.toDegrees(cartographic.longitude);
   const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+  // Match backend/app/core/voxel.py's WGS84-to-grid projection exactly.
   const lonScale = 111320 * Math.cos(Cesium.Math.toRadians(gridOriginWgs84[1]));
   const x = Math.floor((longitude - gridOriginWgs84[0]) * lonScale / gridSpec.voxelSizeM);
   const y = Math.floor((latitude - gridOriginWgs84[1]) * 111132 / gridSpec.voxelSizeM);
@@ -276,7 +286,7 @@ mapPickHandler.setInputAction((event) => {
   });
   setMapPickMode(null);
   mapPickStatus.textContent = name + ' 설정 완료: ' + point.join(',') +
-    ' · 고도 ' + ((z + 0.5) * gridSpec.voxelSizeM) + 'm. 건물 내부라면 고도를 조정하세요.';
+    ' · 비행 고도 ' + ((z + 0.5) * gridSpec.voxelSizeM) + 'm (10m 격자 중심). 정확한 높이는 좌표의 z를 수정하세요.';
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 function parsePoint(text) {
