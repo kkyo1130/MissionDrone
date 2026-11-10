@@ -240,7 +240,7 @@
               <option value="delivery" selected>물류 배송</option>
             </select>
           </div>
-        <div class="group">
+        <div class="group" hidden>
           <label for="start">Start (x,y,z)</label>
           <input id="start" value="2,2,6" />
         </div>
@@ -253,7 +253,7 @@
           </div>
           <p id="mapPickStatus" class="mission-help" role="status">건물을 클릭하세요. 배송: 옥상 이착륙 지점 · 시설 점검: 외벽 주변 경유지 · 재난: 현장 주변 수색 지점 (모의 항로)</p>
         </div>
-        <div class="group">
+        <div class="group" hidden>
           <label for="end">End (x,y,z)</label>
           <input id="end" value="28,28,6" />
         </div>
@@ -280,7 +280,7 @@
           <button id="btnApplyHistoricalWeather" type="button">과거 기상 데이터 적용</button>
           <p id="historicalWeatherStatus" class="mission-help" role="status">기상 미적용 · NOAA 조회 또는 풍속·풍향 입력 후 위험도 생성</p>
         </div>
-        <div class="mission-section">
+        <div class="mission-section" hidden>
           <h3>경유지</h3>
           <div class="group">
             <label for="waypoints">선택 경유지 (x,y,z)</label>
@@ -295,11 +295,11 @@
         <div class="mission-section">
           <h3>비행 제약</h3>
           <div class="form-grid">
-            <div class="group">
+            <div class="group" hidden>
               <label for="minAltitude">최소 고도 (m)</label>
               <input id="minAltitude" type="number" min="0" max="120" step="1" value="10" required />
             </div>
-            <div class="group">
+            <div class="group" hidden>
               <label for="maxAltitude">최대 고도 (m)</label>
               <input id="maxAltitude" type="number" min="1" max="120" step="1" value="100" required />
             </div>
