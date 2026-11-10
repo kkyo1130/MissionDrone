@@ -18,6 +18,7 @@ from app.ai.wind_correction import fetch_era5, predict_wind
 from app.ai.api import MODEL_PATH
 
 router = APIRouter(prefix="/api/weather", tags=["historical weather"])
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 
 
 @lru_cache(maxsize=4)
@@ -57,6 +58,10 @@ def historical_weather(
         path = os.getenv("NOAA_STATION_CSV")
         if not path:
             raise HTTPException(503, "Set NOAA_STATION_CSV to a downloaded NOAA Global Hourly CSV")
+        csv_path = Path(path).expanduser()
+        if not csv_path.is_absolute():
+            csv_path = REPOSITORY_ROOT / csv_path
+        path = str(csv_path)
         if not Path(path).is_file():
             raise HTTPException(503, "Configured NOAA_STATION_CSV file does not exist")
         try:

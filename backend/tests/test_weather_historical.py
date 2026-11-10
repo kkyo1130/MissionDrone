@@ -29,6 +29,21 @@ def test_noaa_not_configured_does_not_silently_fallback(monkeypatch):
     assert response.status_code == 503
 
 
+def test_noaa_relative_path_resolves_from_repository_root(monkeypatch, tmp_path):
+    path = tmp_path / "station.csv"
+    path.write_text('DATE,WND\n2024-07-01T12:00:00,"090,1,N,0050,1"\n', encoding="utf-8")
+    monkeypatch.setattr(weather_api, "REPOSITORY_ROOT", tmp_path)
+    monkeypatch.setenv("NOAA_STATION_CSV", "station.csv")
+    other_directory = tmp_path / "backend"
+    other_directory.mkdir()
+    monkeypatch.chdir(other_directory)
+    response = TestClient(app).get("/api/weather/historical", params={
+        "at": "2024-07-01T12:00:00Z", "source": "noaa"
+    })
+    assert response.status_code == 200
+    assert response.json()["wind_speed_mps"] == 5
+
+
 def test_future_historical_rejected():
     response = TestClient(app).get("/api/weather/historical", params={
         "at": "2099-01-01T00:00:00Z", "source": "era5"
