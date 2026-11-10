@@ -48,7 +48,7 @@ load_dotenv(REPOSITORY_ROOT / ".env")
 
 GRID_SPEC = GridSpec()
 OCCUPANCY = np.ones((GRID_SPEC.width, GRID_SPEC.depth, GRID_SPEC.height), dtype=np.int8)
-GRID_ORIGIN_WGS84 = (126.64239, 37.38786, 0.0)
+GRID_ORIGIN_WGS84 = (126.642, 37.389, 0.0)
 OSM_BUILDINGS: list[dict] = []
 ENVIRONMENT_KIND = 'osm_unavailable'
 PointInput = Tuple[StrictInt, StrictInt, StrictInt]
@@ -192,8 +192,8 @@ def health() -> Dict[str, str]:
 
 
 class OsmEnvironmentRequest(BaseModel):
-    center_lon: float = Field(default=126.6442, ge=126.60, le=126.70)
-    center_lat: float = Field(default=37.3893, ge=37.34, le=37.43)
+    center_lon: float = Field(default=126.6465, ge=126.60, le=126.70)
+    center_lat: float = Field(default=37.3926, ge=37.34, le=37.43)
 
 
 def _osm_height(tags: dict) -> tuple[float, float, str]:
@@ -274,7 +274,7 @@ def _activate_local_buildings(buildings: list[dict], center_lon: float, center_l
     )
     grid = voxelize_osm_buildings(GRID_SPEC, origin, buildings)
     if not np.any(grid == 0):
-        raise ValueError("No building footprints intersect the 320m study area; adjust center coordinates")
+        raise ValueError("No building footprints intersect the 800m study area; adjust center coordinates")
     OCCUPANCY = grid
     GRID_ORIGIN_WGS84 = origin
     OSM_BUILDINGS = buildings
@@ -308,7 +308,7 @@ def import_local_environment(payload: LocalEnvironmentRequest) -> Dict[str, Any]
             payload.center_lat - half_y / 111132, 0.0,
         )
         if not np.any(voxelize_osm_buildings(GRID_SPEC, origin, buildings) == 0):
-            raise ValueError("No building footprints intersect the 320m study area")
+            raise ValueError("No building footprints intersect the 800m study area")
         LOCAL_BUILDINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
         tmp = LOCAL_BUILDINGS_PATH.with_suffix(".tmp")
         tmp.write_text(json.dumps({
@@ -440,8 +440,8 @@ def initialize_osm_city() -> None:
         try:
             document = json.loads(LOCAL_BUILDINGS_PATH.read_text(encoding="utf-8"))
             buildings = _local_geojson_buildings(document)
-            center_lon = float(document.get("center_lon", 126.6442))
-            center_lat = float(document.get("center_lat", 37.3893))
+            center_lon = float(document.get("center_lon", 126.6465))
+            center_lat = float(document.get("center_lat", 37.3926))
             result = _activate_local_buildings(buildings, center_lon, center_lat)
             print(f"Loaded {result['buildings_count']} real buildings from local GeoJSON.")
             return
