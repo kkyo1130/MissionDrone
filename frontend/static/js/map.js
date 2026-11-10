@@ -647,30 +647,14 @@ const droneStatusPanel = document.getElementById('droneStatusPanel');
 const droneStatusText = document.getElementById('droneStatusText');
 const droneBatteryText = document.getElementById('droneBatteryText');
 let selectedRouteEnergyWh = null;
-let droneHoverTimer = null;
+// Keep the flight dashboard pinned on screen instead of hiding on hover.
 function showDronePanel() {
-  if (!droneMarker || !playbackCenter) return;
-  clearTimeout(droneHoverTimer);
-  droneHoverTimer = null;
-  updateDroneStatus();
-  const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
-  if (screen) {
-    const bounds = viewer.scene.canvas.getBoundingClientRect();
-    const parentBounds = droneStatusPanel.offsetParent.getBoundingClientRect();
-    droneStatusPanel.style.left = Math.max(8, Math.min(parentBounds.width - 250, bounds.left - parentBounds.left + screen.x + 22)) + 'px';
-    droneStatusPanel.style.top = Math.max(8, Math.min(parentBounds.height - 190, bounds.top - parentBounds.top + screen.y - 60)) + 'px';
-  }
   droneStatusPanel.hidden = false;
+  updateDroneStatus();
 }
 function scheduleDronePanelHide() {
-  clearTimeout(droneHoverTimer);
-  droneHoverTimer = setTimeout(() => { droneStatusPanel.hidden = true; droneHoverTimer = null; }, 450);
+  // Intentionally persistent: the controls must remain accessible.
 }
-droneStatusPanel.addEventListener('mouseenter', () => {
-  clearTimeout(droneHoverTimer);
-  droneHoverTimer = null;
-});
-droneStatusPanel.addEventListener('mouseleave', scheduleDronePanelHide);
 let droneMarker = null;
 let playbackRunning = false;
 function updateDroneStatus() {
@@ -713,15 +697,6 @@ pauseButton.addEventListener('click', () => {
   pauseButton.textContent = playbackPaused ? '▶ 계속 재생' : 'Ⅱ 일시정지';
   updateDroneStatus();
 });
-viewer.screenSpaceEventHandler.setInputAction((movement) => {
-  if (!droneMarker) return;
-  const picked = viewer.scene.pick(movement.endPosition);
-  if (Cesium.defined(picked) && picked.id === droneMarker) {
-    showDronePanel();
-  } else if (!droneStatusPanel.hidden && !droneHoverTimer) {
-    scheduleDronePanelHide();
-  }
-}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 const playbackDurationSeconds = 18;
 const droneBodyColor = Cesium.Color.fromCssColorString('#e9f5ff');
 const droneAccentColor = Cesium.Color.fromCssColorString('#3f99ff');
@@ -740,9 +715,8 @@ function clearRoutePlayback() {
   droneParts = [];
   droneMarker = null;
   playbackRunning = false;
-  clearTimeout(droneHoverTimer);
-  droneHoverTimer = null;
-  droneStatusPanel.hidden = true;
+  droneStatusPanel.hidden = false;
+  playbackProgress.textContent = '재생 대기';
 }
 
 function addRoutePin(position, text, color) {
@@ -816,7 +790,7 @@ function prepareRoutePlayback(positions) {
   playbackElapsed = 0;
   setPlaybackControls(true);
   playbackProgress.textContent = '출발 대기 · 0%';
-  droneStatusPanel.hidden = true;
+  droneStatusPanel.hidden = false;
   const route = positions.length === 1 ? [positions[0], positions[0]] : positions;
   addRoutePin(route[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
   addRoutePin(route[route.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
