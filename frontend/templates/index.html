@@ -278,7 +278,7 @@
         </div>
         <div class="group">
           <button id="btnApplyHistoricalWeather" type="button">과거 기상 데이터 적용</button>
-          <p id="historicalWeatherStatus" class="mission-help" role="status">현재는 수동 설정한 모의 풍속·풍향을 사용합니다.</p>
+          <p id="historicalWeatherStatus" class="mission-help" role="status">기상 미적용 · NOAA 조회 또는 풍속·풍향 입력 후 위험도 생성</p>
         </div>
         <div class="mission-section">
           <h3>경유지</h3>
@@ -409,7 +409,7 @@
         <div id="status">Grid: {{ grid_shape }} ({{ voxel_size_m }} m voxels)</div>
       </aside>
       <section id="viewer" aria-label="3D 드론 비행 시뮬레이션 지도"></section>
-      <div class="hud-card hud-weather" aria-live="polite"><span class="weather-icon" aria-hidden="true">☁</span><div><div class="hud-kicker">SIMULATED WEATHER</div><div class="hud-value"><span id="hudWind">8.0</span> m/s</div><div class="hud-sub">풍향 <span id="hudDirection">90</span>° · 가상 기상 조건</div></div></div>
+      <div class="hud-card hud-weather" aria-live="polite"><span class="weather-icon" aria-hidden="true">☁</span><div><div class="hud-kicker">APPLIED WEATHER</div><div class="hud-value"><span id="hudWind">–</span> m/s</div><div class="hud-sub">풍향 <span id="hudDirection">–</span>° · 기상 미적용</div></div></div>
       <div class="hud-card hud-legend"><h2>드론 임무 선택</h2>
         <button type="button" class="mission-choice selected" data-mission="inspection"><span class="mission-choice-icon blue">▥</span><span>시설 점검</span><small id="inspectionState">선택</small></button>
         <button type="button" class="mission-choice" data-mission="disaster"><span class="mission-choice-icon red">♨</span><span>재난 대응</span><small id="disasterState">대기</small></button>
@@ -419,7 +419,7 @@
         <div class="mission-metric"><div class="metric-head"><span><i class="dot blue"></i> 시설 점검</span><strong id="inspectionBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill" id="inspectionBar" style="width:0%"></div></div><p id="inspectionDetail">점검 항로를 생성해 주세요</p></div>
         <div class="mission-metric"><div class="metric-head"><span><i class="dot red"></i> 재난 대응</span><strong id="disasterBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill red" id="disasterBar" style="width:0%"></div></div><p id="disasterDetail">재난 항로를 생성해 주세요</p></div>
         <div class="mission-metric"><div class="metric-head"><span><i class="dot gold"></i> 물류 배송</span><strong id="deliveryBadge">미실행</strong></div><div class="metric-track"><div class="metric-fill gold" id="deliveryBar" style="width:0%"></div></div><p id="deliveryDetail">배송 항로를 생성해 주세요</p></div>
-        <div class="wind-summary">적용 풍속 <b id="hudWindMetric">미적용</b> · 위험 복셀 <b id="hudRiskMetric">계산 중</b></div>
+        <div class="wind-summary">적용 풍속 <b id="hudWindMetric">미적용</b> · 위험 복셀 <b id="hudRiskMetric">0개</b></div>
       </div>
       <div class="route-marker start-marker" aria-hidden="true"><span>1</span> 출발지</div>
       <div class="route-marker end-marker" aria-hidden="true"><span>2</span> 도착지</div>
