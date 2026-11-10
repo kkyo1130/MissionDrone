@@ -63,7 +63,7 @@ def test_risk_map_returns_voxel_units_and_free_points():
     response = client.get("/api/risk-map", params={"threshold": 0.9})
     assert response.status_code == 200
     result = response.json()
-    assert result["grid_shape"] == [32, 32, 12]
+    assert result["grid_shape"] == list(OCCUPANCY.shape)
     assert result["voxel_size_m"] == 10
     assert all(0.9 <= point["risk"] <= 1.0 for point in result["points"])
     assert all(
@@ -88,7 +88,7 @@ def test_route_returns_valid_path():
 
 def test_route_rejects_invalid_or_blocked_points(monkeypatch):
     out_of_bounds = client.post(
-        "/api/route", json={"start": [32, 0, 0], "end": [28, 28, 6]}
+        "/api/route", json={"start": [OCCUPANCY.shape[0], 0, 0], "end": [28, 28, 6]}
     )
     assert out_of_bounds.status_code == 422
 
