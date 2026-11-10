@@ -211,14 +211,14 @@ let currentWindDirection = windDirectionInput.value.trim() ? Number(windDirectio
 let activeMapPick = null;
 const pickedMarkers = {start: null, end: null};
 const pointChecks = {start: null, end: null};
-let pointCheckSerial = 0;
+const pointCheckSerial = {start: 0, end: 0};
 const routeButtons = ['btnRoute', 'btnCandidates'].map(id => document.getElementById(id));
 function refreshPointButtons() {
   const ready = pointChecks.start?.valid === true && pointChecks.end?.valid === true;
   routeButtons.forEach(button => { if (button) button.disabled = !ready; });
 }
 async function checkPickedPoint(kind, point, showFeedback = true) {
-  const serial = ++pointCheckSerial;
+  const serial = ++pointCheckSerial[kind];
   pointChecks[kind] = null;
   refreshPointButtons();
   const response = await fetch('/api/points/check', {
@@ -228,7 +228,7 @@ async function checkPickedPoint(kind, point, showFeedback = true) {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.detail || '지점 검사 실패');
-  if (serial !== pointCheckSerial) return;
+  if (serial !== pointCheckSerial[kind]) return;
   pointChecks[kind] = {valid: result.valid, point: point.join(',')};
   const marker = pickedMarkers[kind];
   if (marker) marker.point.color = result.valid ? Cesium.Color.LIME : Cesium.Color.RED;
@@ -237,6 +237,22 @@ async function checkPickedPoint(kind, point, showFeedback = true) {
       ? (kind === 'start' ? '출발점' : '도착점') + ' 비행 가능 ✓ · ' + point.join(',')
       : '⚠ 선택 불가: ' + result.reason + (result.suggested_point ? ' · 추천 좌표 ' + result.suggested_point.join(',') + ' (입력란에 적용 가능)' : ' · 주변 안전 좌표 없음');
     mapPickStatus.style.color = result.valid ? '#86efac' : '#fca5a5';
+  }
+  if (showFeedback && !result.valid && result.suggested_point) {
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.textContent = '추천 안전 좌표 적용 (' + result.suggested_point.join(',') + ')';
+    apply.className = 'secondary';
+    apply.style.marginTop = '8px';
+    apply.addEventListener('click', () => {
+      const input = kind === 'start' ? startInput : endInput;
+      input.value = result.suggested_point.join(',');
+      const marker = pickedMarkers[kind];
+      if (marker) marker.position = voxelToCartesian(result.suggested_point);
+      checkPickedPoint(kind, result.suggested_point).catch(error => {mapPickStatus.textContent = error.message;});
+      apply.remove();
+    });
+    mapPickStatus.append(document.createTextNode(' '), apply);
   }
   refreshPointButtons();
 }
