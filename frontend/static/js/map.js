@@ -306,10 +306,21 @@ mapPickHandler.setInputAction(async (event) => {
   const lonScale = 111320 * Math.cos(Cesium.Math.toRadians(gridOriginWgs84[1]));
   const x = Math.floor((longitude - gridOriginWgs84[0]) * lonScale / gridSpec.voxelSizeM);
   const y = Math.floor((latitude - gridOriginWgs84[1]) * 111132 / gridSpec.voxelSizeM);
+  const building = pickedObject && buildingEntities.get(pickedObject.id?.id);
+  const kind = activeMapPick;
+  selectedBuildings[kind] = building || null;
+  // Delivery: the roof is the landing surface. Flight routing still uses
+  // the first unobstructed voxel above it, not the solid roof voxel.
+  const missionKind = missionTypeInput.value;
+  let roofAltitude = null;
+  if (building && missionKind === 'delivery') {
+    roofAltitude = Number(building.height_m);
+  }
   const previous = activeMapPick === 'start' ? startInput : endInput;
   const currentZ = Number(previous.value.split(',')[2]);
-  const z = Number.isInteger(currentZ) && currentZ >= 0 && currentZ < gridSpec.shape[2]
-    ? currentZ : 6;
+  const roofZ = roofAltitude === null ? null : Math.ceil((roofAltitude + 5) / gridSpec.voxelSizeM - 0.5);
+  const z = roofZ !== null ? roofZ : (Number.isInteger(currentZ) && currentZ >= 0 && currentZ < gridSpec.shape[2]
+    ? currentZ : 6);
   if (x < 0 || y < 0 || x >= gridSpec.shape[0] || y >= gridSpec.shape[1]) {
     mapPickStatus.textContent = '선택 위치가 연구 지역 밖입니다. 800m 연구 지역 안을 클릭하세요.';
     return;
@@ -317,12 +328,13 @@ mapPickHandler.setInputAction(async (event) => {
   const point = [x, y, z];
   const name = activeMapPick === 'start' ? '출발점' : '도착점';
   previous.value = point.join(',');
-  const kind = activeMapPick;
   if (pickedMarkers[kind]) viewer.entities.remove(pickedMarkers[kind]);
   pickedMarkers[kind] = viewer.entities.add({
     name,
-    position: localMetersToCartesian((x + 0.5) * gridSpec.voxelSizeM,
-      (y + 0.5) * gridSpec.voxelSizeM, (z + 0.5) * gridSpec.voxelSizeM),
+    position: building && missionKind === 'delivery'
+      ? Cesium.Cartesian3.fromDegrees(longitude, latitude, roofAltitude)
+      : localMetersToCartesian((x + 0.5) * gridSpec.voxelSizeM,
+        (y + 0.5) * gridSpec.voxelSizeM, (z + 0.5) * gridSpec.voxelSizeM),
     point: {
       pixelSize: 15,
       color: kind === 'start' ? Cesium.Color.LIME : Cesium.Color.RED,
@@ -341,7 +353,7 @@ mapPickHandler.setInputAction(async (event) => {
     },
   });
   setMapPickMode(null);
-  mapPickStatus.textContent = name + ' 안전성 확인 중...';
+  mapPickStatus.textContent = name + (roofAltitude !== null ? ' · 옥상 높이 ' + roofAltitude + 'm' : '') + ' 안전성 확인 중...';
   try { await checkPickedPoint(kind, point); }
   catch (error) { mapPickStatus.textContent = '검사 실패: ' + error.message; mapPickStatus.style.color = '#fca5a5'; }
 
