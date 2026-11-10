@@ -230,17 +230,40 @@ def load_osm_environment(payload: OsmEnvironmentRequest) -> Dict[str, Any]:
     query = (f'[out:json][timeout:30];'
              f'(way["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f});'
              f'relation["building"]({south:.7f},{west:.7f},{north:.7f},{east:.7f}););out geom;')
-    req = UrlRequest(
+    # Retry across independent Overpass instances. A single public endpoint
+    # can be overloaded or unavailable, so do not make it a single point of failure.
+    endpoints = list(dict.fromkeys([
         os.getenv("OSM_OVERPASS_URL", "https://overpass.kumi.systems/api/interpreter"),
-        data=urlencode({"data": query}).encode("utf-8"),
-        headers={"User-Agent": "MissionDrone-University-Simulation/1.0"},
-        method="POST",
-    )
-    try:
-        with urlopen(req, timeout=12) as response:
-            raw = json.load(response)
-    except (URLError, TimeoutError, ValueError, OSError) as exc:
-        raise HTTPException(status_code=503, detail=f"OSM building service unavailable: {exc}") from exc
+        "https://overpass.nchc.org.tw/api/interpreter",
+        "https://overpass-api.de/api/interpreter",
+    ]))
+    raw = None
+    errors = []
+    for endpoint in endpoints:
+        req = UrlRequest(
+            endpoint,
+            data=urlencode({"data": query}).encode("utf-8"),
+            headers={
+                "User-Agent": "MissionDrone-University-Simulation/1.0",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urlopen(req, timeout=10) as response:
+                candidate = json.load(response)
+            if not isinstance(candidate, dict) or not isinstance(candidate.get("elements"), list):
+                raise ValueError("Invalid Overpass JSON response")
+            raw = candidate
+            break
+        except (URLError, TimeoutError, ValueError, OSError) as exc:
+            errors.append(f"{endpoint}: {exc}")
+    if raw is None:
+        raise HTTPException(
+            status_code=503,
+            detail="OSM building service unavailable (all providers failed): " + " | ".join(errors),
+        )
     buildings = []
     for item in raw.get("elements", []):
         if item.get("type") != "way":
