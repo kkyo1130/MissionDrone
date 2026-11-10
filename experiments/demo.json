@@ -1,0 +1,1866 @@
+{
+  "routes": {
+    "routes": [
+      {
+        "id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "points": [
+          [
+            10.0,
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            20.0,
+            20.0
+          ],
+          [
+            30.0,
+            30.0,
+            20.0
+          ],
+          [
+            40.0,
+            30.0,
+            20.0
+          ],
+          [
+            50.0,
+            30.0,
+            20.0
+          ],
+          [
+            60.0,
+            40.0,
+            20.0
+          ],
+          [
+            70.0,
+            40.0,
+            20.0
+          ],
+          [
+            80.0,
+            40.0,
+            20.0
+          ],
+          [
+            90.0,
+            40.0,
+            20.0
+          ],
+          [
+            100.0,
+            40.0,
+            20.0
+          ],
+          [
+            110.0,
+            50.0,
+            20.0
+          ],
+          [
+            120.0,
+            60.0,
+            20.0
+          ],
+          [
+            130.0,
+            70.0,
+            20.0
+          ],
+          [
+            140.0,
+            70.0,
+            20.0
+          ],
+          [
+            150.0,
+            80.0,
+            20.0
+          ]
+        ],
+        "distance_m": 164.8528137423857,
+        "risk_score": 0.0,
+        "wgs84": [
+          {
+            "longitude": 126.97811318999655,
+            "latitude": 37.56668019856712,
+            "altitude": 20.000039279460907
+          },
+          {
+            "longitude": 126.97822637999313,
+            "latitude": 37.566680198404335,
+            "altitude": 20.000062769278884
+          },
+          {
+            "longitude": 126.97833957039867,
+            "latitude": 37.56677029744165,
+            "altitude": 20.000141230411828
+          },
+          {
+            "longitude": 126.9784527605316,
+            "latitude": 37.56677029706182,
+            "altitude": 20.000196035951376
+          },
+          {
+            "longitude": 126.97856595066447,
+            "latitude": 37.56677029657348,
+            "altitude": 20.000266501680017
+          },
+          {
+            "longitude": 126.97867914161534,
+            "latitude": 37.566860395283854,
+            "altitude": 20.000407664105296
+          },
+          {
+            "longitude": 126.97879233188456,
+            "latitude": 37.56686039457846,
+            "altitude": 20.000509447418153
+          },
+          {
+            "longitude": 126.97890552215375,
+            "latitude": 37.56686039376455,
+            "altitude": 20.00062688998878
+          },
+          {
+            "longitude": 126.97901871242297,
+            "latitude": 37.56686039284212,
+            "altitude": 20.000759990885854
+          },
+          {
+            "longitude": 126.97913190269217,
+            "latitude": 37.56686039181117,
+            "altitude": 20.00090875197202
+          },
+          {
+            "longitude": 126.979245094461,
+            "latitude": 37.566950489977536,
+            "altitude": 20.001143935136497
+          },
+          {
+            "longitude": 126.9793582865025,
+            "latitude": 37.567040588034,
+            "altitude": 20.001410502940416
+          },
+          {
+            "longitude": 126.97947147881666,
+            "latitude": 37.56713068598053,
+            "altitude": 20.001708454452455
+          },
+          {
+            "longitude": 126.9795846694948,
+            "latitude": 37.567130684515476,
+            "altitude": 20.00191984977573
+          },
+          {
+            "longitude": 126.97969786221793,
+            "latitude": 37.56722078224359,
+            "altitude": 20.002264846116304
+          }
+        ],
+        "generation_id": "7321e304-b279-4c96-b916-d800d6ab0724",
+        "generated_at": "2026-11-08T11:07:33.600614+00:00",
+        "planner_version": "p0-1.0",
+        "input_hash": "7ed3e6df19cabd51d3976d8d8ffebed5212fa637f0ce79fd9377d55413d97e9d"
+      },
+      {
+        "id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "points": [
+          [
+            10.0,
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            20.0,
+            20.0
+          ],
+          [
+            30.0,
+            20.0,
+            20.0
+          ],
+          [
+            40.0,
+            20.0,
+            20.0
+          ],
+          [
+            50.0,
+            20.0,
+            20.0
+          ],
+          [
+            60.0,
+            30.0,
+            20.0
+          ],
+          [
+            70.0,
+            30.0,
+            20.0
+          ],
+          [
+            80.0,
+            30.0,
+            20.0
+          ],
+          [
+            90.0,
+            30.0,
+            20.0
+          ],
+          [
+            100.0,
+            30.0,
+            20.0
+          ],
+          [
+            110.0,
+            40.0,
+            20.0
+          ],
+          [
+            120.0,
+            50.0,
+            20.0
+          ],
+          [
+            130.0,
+            60.0,
+            20.0
+          ],
+          [
+            140.0,
+            60.0,
+            20.0
+          ],
+          [
+            150.0,
+            70.0,
+            20.0
+          ],
+          [
+            150.0,
+            80.0,
+            20.0
+          ]
+        ],
+        "distance_m": 170.71067811865476,
+        "risk_score": 0.0,
+        "wgs84": [
+          {
+            "longitude": 126.97811318999655,
+            "latitude": 37.56668019856712,
+            "altitude": 20.000039279460907
+          },
+          {
+            "longitude": 126.97822637999313,
+            "latitude": 37.566680198404335,
+            "altitude": 20.000062769278884
+          },
+          {
+            "longitude": 126.97833956998969,
+            "latitude": 37.566680198133035,
+            "altitude": 20.000101916491985
+          },
+          {
+            "longitude": 126.97845275998624,
+            "latitude": 37.566680197753215,
+            "altitude": 20.000156722031534
+          },
+          {
+            "longitude": 126.97856594998282,
+            "latitude": 37.566680197264866,
+            "altitude": 20.000227187760174
+          },
+          {
+            "longitude": 126.97867914079737,
+            "latitude": 37.56677029597661,
+            "altitude": 20.00035262480378
+          },
+          {
+            "longitude": 126.97879233093022,
+            "latitude": 37.566770295271226,
+            "altitude": 20.00045440904796
+          },
+          {
+            "longitude": 126.97890552106311,
+            "latitude": 37.56677029445732,
+            "altitude": 20.000571850687265
+          },
+          {
+            "longitude": 126.97901871119596,
+            "latitude": 37.566770293534894,
+            "altitude": 20.00070495251566
+          },
+          {
+            "longitude": 126.97913190132883,
+            "latitude": 37.566770292503946,
+            "altitude": 20.000853712670505
+          },
+          {
+            "longitude": 126.97924509296134,
+            "latitude": 37.5668603906717,
+            "altitude": 20.001073171384633
+          },
+          {
+            "longitude": 126.9793582848665,
+            "latitude": 37.56695048872954,
+            "altitude": 20.00132401380688
+          },
+          {
+            "longitude": 126.97947147704433,
+            "latitude": 37.56704058667747,
+            "altitude": 20.001606239937246
+          },
+          {
+            "longitude": 126.97958466758614,
+            "latitude": 37.567040585212425,
+            "altitude": 20.001817636191845
+          },
+          {
+            "longitude": 126.97969786017293,
+            "latitude": 37.56713068294191,
+            "altitude": 20.002146907150745
+          },
+          {
+            "longitude": 126.97969786221793,
+            "latitude": 37.56722078224359,
+            "altitude": 20.002264846116304
+          }
+        ],
+        "generation_id": "7321e304-b279-4c96-b916-d800d6ab0724",
+        "generated_at": "2026-11-08T11:07:33.600614+00:00",
+        "planner_version": "p0-1.0",
+        "input_hash": "7ed3e6df19cabd51d3976d8d8ffebed5212fa637f0ce79fd9377d55413d97e9d"
+      },
+      {
+        "id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "points": [
+          [
+            10.0,
+            20.0,
+            20.0
+          ],
+          [
+            20.0,
+            10.0,
+            20.0
+          ],
+          [
+            30.0,
+            10.0,
+            20.0
+          ],
+          [
+            40.0,
+            10.0,
+            20.0
+          ],
+          [
+            50.0,
+            10.0,
+            20.0
+          ],
+          [
+            60.0,
+            20.0,
+            20.0
+          ],
+          [
+            70.0,
+            20.0,
+            20.0
+          ],
+          [
+            80.0,
+            20.0,
+            20.0
+          ],
+          [
+            90.0,
+            20.0,
+            20.0
+          ],
+          [
+            100.0,
+            20.0,
+            20.0
+          ],
+          [
+            110.0,
+            30.0,
+            20.0
+          ],
+          [
+            120.0,
+            40.0,
+            20.0
+          ],
+          [
+            130.0,
+            50.0,
+            20.0
+          ],
+          [
+            140.0,
+            50.0,
+            20.0
+          ],
+          [
+            150.0,
+            60.0,
+            20.0
+          ],
+          [
+            150.0,
+            70.0,
+            20.0
+          ],
+          [
+            150.0,
+            80.0,
+            20.0
+          ]
+        ],
+        "distance_m": 184.8528137423857,
+        "risk_score": 0.0,
+        "wgs84": [
+          {
+            "longitude": 126.97811318999655,
+            "latitude": 37.56668019856712,
+            "altitude": 20.000039279460907
+          },
+          {
+            "longitude": 126.97822637972047,
+            "latitude": 37.566590099094334,
+            "altitude": 20.000039180740714
+          },
+          {
+            "longitude": 126.9783395695807,
+            "latitude": 37.566590098823035,
+            "altitude": 20.000078327953815
+          },
+          {
+            "longitude": 126.97845275944091,
+            "latitude": 37.56659009844322,
+            "altitude": 20.000133134424686
+          },
+          {
+            "longitude": 126.97856594930116,
+            "latitude": 37.56659009795487,
+            "altitude": 20.000203600153327
+          },
+          {
+            "longitude": 126.97867913997938,
+            "latitude": 37.566680196668,
+            "altitude": 20.000313312746584
+          },
+          {
+            "longitude": 126.9787923299759,
+            "latitude": 37.566680195962626,
+            "altitude": 20.00041509605944
+          },
+          {
+            "longitude": 126.97890551997246,
+            "latitude": 37.56668019514872,
+            "altitude": 20.000532537698746
+          },
+          {
+            "longitude": 126.97901870996898,
+            "latitude": 37.566680194226294,
+            "altitude": 20.000665639527142
+          },
+          {
+            "longitude": 126.97913189996552,
+            "latitude": 37.56668019319535,
+            "altitude": 20.000814399681985
+          },
+          {
+            "longitude": 126.97924509146169,
+            "latitude": 37.566770291364485,
+            "altitude": 20.001018132083118
+          },
+          {
+            "longitude": 126.9793582832305,
+            "latitude": 37.5668603894237,
+            "altitude": 20.001253250055015
+          },
+          {
+            "longitude": 126.979471475272,
+            "latitude": 37.56695048737302,
+            "altitude": 20.00151975080371
+          },
+          {
+            "longitude": 126.97958466567748,
+            "latitude": 37.566950485907974,
+            "altitude": 20.001731147058308
+          },
+          {
+            "longitude": 126.97969785812793,
+            "latitude": 37.56704058363886,
+            "altitude": 20.00204469077289
+          },
+          {
+            "longitude": 126.97969786017293,
+            "latitude": 37.56713068294191,
+            "altitude": 20.002146907150745
+          },
+          {
+            "longitude": 126.97969786221793,
+            "latitude": 37.56722078224359,
+            "altitude": 20.002264846116304
+          }
+        ],
+        "generation_id": "7321e304-b279-4c96-b916-d800d6ab0724",
+        "generated_at": "2026-11-08T11:07:33.600614+00:00",
+        "planner_version": "p0-1.0",
+        "input_hash": "7ed3e6df19cabd51d3976d8d8ffebed5212fa637f0ce79fd9377d55413d97e9d"
+      }
+    ],
+    "requested_count": 3,
+    "generated_count": 3,
+    "reason": null
+  },
+  "comparison": {
+    "id": "dfdf9fc6-3122-43d2-8476-6325b2261bfb",
+    "recommended_route_id": null,
+    "scores": {},
+    "excluded_route_ids": [
+      "075ac86d-736b-4026-95b4-5a671bdafd53",
+      "37e5e205-046c-4861-a2d9-27078e9c3753",
+      "b4b5c427-8c2c-4eec-83c9-ecab53948a1c"
+    ],
+    "reason": "모든 선택 기상에서 제약을 충족하는 후보가 없습니다.",
+    "weights": {
+      "distance_m": 0.2,
+      "time_s": 0.4,
+      "energy_wh": 0.3,
+      "risk_exposure_s": 0.1
+    },
+    "scenario_results": {
+      "strong": {
+        "recommended_route_id": null,
+        "scores": {},
+        "excluded_route_ids": [
+          "075ac86d-736b-4026-95b4-5a671bdafd53",
+          "37e5e205-046c-4861-a2d9-27078e9c3753",
+          "b4b5c427-8c2c-4eec-83c9-ecab53948a1c"
+        ],
+        "reason": "모든 선택 기상에서 제약을 충족하는 후보가 없습니다.",
+        "weights": {
+          "distance_m": 0.2,
+          "time_s": 0.4,
+          "energy_wh": 0.3,
+          "risk_exposure_s": 0.1
+        }
+      },
+      "weak": {
+        "recommended_route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "scores": {
+          "075ac86d-736b-4026-95b4-5a671bdafd53": 100.0,
+          "b4b5c427-8c2c-4eec-83c9-ecab53948a1c": 70.47849,
+          "37e5e205-046c-4861-a2d9-27078e9c3753": 0.0
+        },
+        "excluded_route_ids": [],
+        "reason": "모든 선택 기상·반복에서 안전 및 예산을 통과한 후보의 임무별 정규화 점수 비교",
+        "weights": {
+          "distance_m": 0.2,
+          "time_s": 0.4,
+          "energy_wh": 0.3,
+          "risk_exposure_s": 0.1
+        }
+      },
+      "moderate": {
+        "recommended_route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "scores": {
+          "37e5e205-046c-4861-a2d9-27078e9c3753": 0.0,
+          "075ac86d-736b-4026-95b4-5a671bdafd53": 100.0,
+          "b4b5c427-8c2c-4eec-83c9-ecab53948a1c": 73.285744
+        },
+        "excluded_route_ids": [],
+        "reason": "모든 선택 기상·반복에서 안전 및 예산을 통과한 후보의 임무별 정규화 점수 비교",
+        "weights": {
+          "distance_m": 0.2,
+          "time_s": 0.4,
+          "energy_wh": 0.3,
+          "risk_exposure_s": 0.1
+        }
+      }
+    }
+  },
+  "replay": {
+    "matches": true,
+    "run_count": 27,
+    "input_hash_valid": true,
+    "simulator_version": "p0-1.0"
+  },
+  "experiment": {
+    "id": "406c573f-4a16-4934-b260-2e567b1d1549",
+    "units": {
+      "time": "s",
+      "energy": "Wh",
+      "distance": "m",
+      "coordinates": "local ENU"
+    },
+    "config": {
+      "seed": 42,
+      "repeats": 3,
+      "mission_id": "43a21ac0-d949-4134-947d-60a32aece21a",
+      "weather_ids": [
+        "weak",
+        "moderate",
+        "strong"
+      ]
+    },
+    "status": "completed",
+    "snapshot": {
+      "routes": [
+        {
+          "id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+          "wgs84": [
+            {
+              "altitude": 20.000039279460907,
+              "latitude": 37.56668019856712,
+              "longitude": 126.97811318999655
+            },
+            {
+              "altitude": 20.000062769278884,
+              "latitude": 37.566680198404335,
+              "longitude": 126.97822637999313
+            },
+            {
+              "altitude": 20.000141230411828,
+              "latitude": 37.56677029744165,
+              "longitude": 126.97833957039867
+            },
+            {
+              "altitude": 20.000196035951376,
+              "latitude": 37.56677029706182,
+              "longitude": 126.9784527605316
+            },
+            {
+              "altitude": 20.000266501680017,
+              "latitude": 37.56677029657348,
+              "longitude": 126.97856595066447
+            },
+            {
+              "altitude": 20.000407664105296,
+              "latitude": 37.566860395283854,
+              "longitude": 126.97867914161534
+            },
+            {
+              "altitude": 20.000509447418153,
+              "latitude": 37.56686039457846,
+              "longitude": 126.97879233188456
+            },
+            {
+              "altitude": 20.00062688998878,
+              "latitude": 37.56686039376455,
+              "longitude": 126.97890552215375
+            },
+            {
+              "altitude": 20.000759990885854,
+              "latitude": 37.56686039284212,
+              "longitude": 126.97901871242297
+            },
+            {
+              "altitude": 20.00090875197202,
+              "latitude": 37.56686039181117,
+              "longitude": 126.97913190269217
+            },
+            {
+              "altitude": 20.001143935136497,
+              "latitude": 37.566950489977536,
+              "longitude": 126.979245094461
+            },
+            {
+              "altitude": 20.001410502940416,
+              "latitude": 37.567040588034,
+              "longitude": 126.9793582865025
+            },
+            {
+              "altitude": 20.001708454452455,
+              "latitude": 37.56713068598053,
+              "longitude": 126.97947147881666
+            },
+            {
+              "altitude": 20.00191984977573,
+              "latitude": 37.567130684515476,
+              "longitude": 126.9795846694948
+            },
+            {
+              "altitude": 20.002264846116304,
+              "latitude": 37.56722078224359,
+              "longitude": 126.97969786221793
+            }
+          ],
+          "points": [
+            [
+              10.0,
+              20.0,
+              20.0
+            ],
+            [
+              20.0,
+              20.0,
+              20.0
+            ],
+            [
+              30.0,
+              30.0,
+              20.0
+            ],
+            [
+              40.0,
+              30.0,
+              20.0
+            ],
+            [
+              50.0,
+              30.0,
+              20.0
+            ],
+            [
+              60.0,
+              40.0,
+              20.0
+            ],
+            [
+              70.0,
+              40.0,
+              20.0
+            ],
+            [
+              80.0,
+              40.0,
+              20.0
+            ],
+            [
+              90.0,
+              40.0,
+              20.0
+            ],
+            [
+              100.0,
+              40.0,
+              20.0
+            ],
+            [
+              110.0,
+              50.0,
+              20.0
+            ],
+            [
+              120.0,
+              60.0,
+              20.0
+            ],
+            [
+              130.0,
+              70.0,
+              20.0
+            ],
+            [
+              140.0,
+              70.0,
+              20.0
+            ],
+            [
+              150.0,
+              80.0,
+              20.0
+            ]
+          ],
+          "distance_m": 164.8528137423857,
+          "input_hash": "7ed3e6df19cabd51d3976d8d8ffebed5212fa637f0ce79fd9377d55413d97e9d",
+          "risk_score": 0.0,
+          "generated_at": "2026-11-08T11:07:33.600614+00:00",
+          "generation_id": "7321e304-b279-4c96-b916-d800d6ab0724",
+          "planner_version": "p0-1.0"
+        },
+        {
+          "id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+          "wgs84": [
+            {
+              "altitude": 20.000039279460907,
+              "latitude": 37.56668019856712,
+              "longitude": 126.97811318999655
+            },
+            {
+              "altitude": 20.000039180740714,
+              "latitude": 37.566590099094334,
+              "longitude": 126.97822637972047
+            },
+            {
+              "altitude": 20.000078327953815,
+              "latitude": 37.566590098823035,
+              "longitude": 126.9783395695807
+            },
+            {
+              "altitude": 20.000133134424686,
+              "latitude": 37.56659009844322,
+              "longitude": 126.97845275944091
+            },
+            {
+              "altitude": 20.000203600153327,
+              "latitude": 37.56659009795487,
+              "longitude": 126.97856594930116
+            },
+            {
+              "altitude": 20.000313312746584,
+              "latitude": 37.566680196668,
+              "longitude": 126.97867913997938
+            },
+            {
+              "altitude": 20.00041509605944,
+              "latitude": 37.566680195962626,
+              "longitude": 126.9787923299759
+            },
+            {
+              "altitude": 20.000532537698746,
+              "latitude": 37.56668019514872,
+              "longitude": 126.97890551997246
+            },
+            {
+              "altitude": 20.000665639527142,
+              "latitude": 37.566680194226294,
+              "longitude": 126.97901870996898
+            },
+            {
+              "altitude": 20.000814399681985,
+              "latitude": 37.56668019319535,
+              "longitude": 126.97913189996552
+            },
+            {
+              "altitude": 20.001018132083118,
+              "latitude": 37.566770291364485,
+              "longitude": 126.97924509146169
+            },
+            {
+              "altitude": 20.001253250055015,
+              "latitude": 37.5668603894237,
+              "longitude": 126.9793582832305
+            },
+            {
+              "altitude": 20.00151975080371,
+              "latitude": 37.56695048737302,
+              "longitude": 126.979471475272
+            },
+            {
+              "altitude": 20.001731147058308,
+              "latitude": 37.566950485907974,
+              "longitude": 126.97958466567748
+            },
+            {
+              "altitude": 20.00204469077289,
+              "latitude": 37.56704058363886,
+              "longitude": 126.97969785812793
+            },
+            {
+              "altitude": 20.002146907150745,
+              "latitude": 37.56713068294191,
+              "longitude": 126.97969786017293
+            },
+            {
+              "altitude": 20.002264846116304,
+              "latitude": 37.56722078224359,
+              "longitude": 126.97969786221793
+            }
+          ],
+          "points": [
+            [
+              10.0,
+              20.0,
+              20.0
+            ],
+            [
+              20.0,
+              10.0,
+              20.0
+            ],
+            [
+              30.0,
+              10.0,
+              20.0
+            ],
+            [
+              40.0,
+              10.0,
+              20.0
+            ],
+            [
+              50.0,
+              10.0,
+              20.0
+            ],
+            [
+              60.0,
+              20.0,
+              20.0
+            ],
+            [
+              70.0,
+              20.0,
+              20.0
+            ],
+            [
+              80.0,
+              20.0,
+              20.0
+            ],
+            [
+              90.0,
+              20.0,
+              20.0
+            ],
+            [
+              100.0,
+              20.0,
+              20.0
+            ],
+            [
+              110.0,
+              30.0,
+              20.0
+            ],
+            [
+              120.0,
+              40.0,
+              20.0
+            ],
+            [
+              130.0,
+              50.0,
+              20.0
+            ],
+            [
+              140.0,
+              50.0,
+              20.0
+            ],
+            [
+              150.0,
+              60.0,
+              20.0
+            ],
+            [
+              150.0,
+              70.0,
+              20.0
+            ],
+            [
+              150.0,
+              80.0,
+              20.0
+            ]
+          ],
+          "distance_m": 184.8528137423857,
+          "input_hash": "7ed3e6df19cabd51d3976d8d8ffebed5212fa637f0ce79fd9377d55413d97e9d",
+          "risk_score": 0.0,
+          "generated_at": "2026-11-08T11:07:33.600614+00:00",
+          "generation_id": "7321e304-b279-4c96-b916-d800d6ab0724",
+          "planner_version": "p0-1.0"
+        },
+        {
+          "id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+          "wgs84": [
+            {
+              "altitude": 20.000039279460907,
+              "latitude": 37.56668019856712,
+              "longitude": 126.97811318999655
+            },
+            {
+              "altitude": 20.000062769278884,
+              "latitude": 37.566680198404335,
+              "longitude": 126.97822637999313
+            },
+            {
+              "altitude": 20.000101916491985,
+              "latitude": 37.566680198133035,
+              "longitude": 126.97833956998969
+            },
+            {
+              "altitude": 20.000156722031534,
+              "latitude": 37.566680197753215,
+              "longitude": 126.97845275998624
+            },
+            {
+              "altitude": 20.000227187760174,
+              "latitude": 37.566680197264866,
+              "longitude": 126.97856594998282
+            },
+            {
+              "altitude": 20.00035262480378,
+              "latitude": 37.56677029597661,
+              "longitude": 126.97867914079737
+            },
+            {
+              "altitude": 20.00045440904796,
+              "latitude": 37.566770295271226,
+              "longitude": 126.97879233093022
+            },
+            {
+              "altitude": 20.000571850687265,
+              "latitude": 37.56677029445732,
+              "longitude": 126.97890552106311
+            },
+            {
+              "altitude": 20.00070495251566,
+              "latitude": 37.566770293534894,
+              "longitude": 126.97901871119596
+            },
+            {
+              "altitude": 20.000853712670505,
+              "latitude": 37.566770292503946,
+              "longitude": 126.97913190132883
+            },
+            {
+              "altitude": 20.001073171384633,
+              "latitude": 37.5668603906717,
+              "longitude": 126.97924509296134
+            },
+            {
+              "altitude": 20.00132401380688,
+              "latitude": 37.56695048872954,
+              "longitude": 126.9793582848665
+            },
+            {
+              "altitude": 20.001606239937246,
+              "latitude": 37.56704058667747,
+              "longitude": 126.97947147704433
+            },
+            {
+              "altitude": 20.001817636191845,
+              "latitude": 37.567040585212425,
+              "longitude": 126.97958466758614
+            },
+            {
+              "altitude": 20.002146907150745,
+              "latitude": 37.56713068294191,
+              "longitude": 126.97969786017293
+            },
+            {
+              "altitude": 20.002264846116304,
+              "latitude": 37.56722078224359,
+              "longitude": 126.97969786221793
+            }
+          ],
+          "points": [
+            [
+              10.0,
+              20.0,
+              20.0
+            ],
+            [
+              20.0,
+              20.0,
+              20.0
+            ],
+            [
+              30.0,
+              20.0,
+              20.0
+            ],
+            [
+              40.0,
+              20.0,
+              20.0
+            ],
+            [
+              50.0,
+              20.0,
+              20.0
+            ],
+            [
+              60.0,
+              30.0,
+              20.0
+            ],
+            [
+              70.0,
+              30.0,
+              20.0
+            ],
+            [
+              80.0,
+              30.0,
+              20.0
+            ],
+            [
+              90.0,
+              30.0,
+              20.0
+            ],
+            [
+              100.0,
+              30.0,
+              20.0
+            ],
+            [
+              110.0,
+              40.0,
+              20.0
+            ],
+            [
+              120.0,
+              50.0,
+              20.0
+            ],
+            [
+              130.0,
+              60.0,
+              20.0
+            ],
+            [
+              140.0,
+              60.0,
+              20.0
+            ],
+            [
+              150.0,
+              70.0,
+              20.0
+            ],
+            [
+              150.0,
+              80.0,
+              20.0
+            ]
+          ],
+          "distance_m": 170.71067811865476,
+          "input_hash": "7ed3e6df19cabd51d3976d8d8ffebed5212fa637f0ce79fd9377d55413d97e9d",
+          "risk_score": 0.0,
+          "generated_at": "2026-11-08T11:07:33.600614+00:00",
+          "generation_id": "7321e304-b279-4c96-b916-d800d6ab0724",
+          "planner_version": "p0-1.0"
+        }
+      ],
+      "mission": {
+        "goal": {
+          "x": 150.0,
+          "y": 80.0,
+          "z": 20.0
+        },
+        "kind": "delivery",
+        "start": {
+          "x": 10.0,
+          "y": 20.0,
+          "z": 20.0
+        },
+        "targets": [],
+        "waypoints": [],
+        "battery_wh": 150.0,
+        "payload_kg": 0.0,
+        "clearance_m": 3.0,
+        "airspeed_mps": 10.0,
+        "max_turn_deg": 135.0,
+        "time_limit_s": 1800.0,
+        "max_climb_mps": 5.0,
+        "drone_radius_m": 1.0,
+        "environment_id": "demo-city",
+        "max_altitude_m": 100.0,
+        "min_altitude_m": 5.0,
+        "position_error_m": 1.0,
+        "observation_radius_m": 20.0
+      },
+      "weather": [
+        {
+          "id": "weak",
+          "name": "weak",
+          "source": "synthetic scenario; not observed weather",
+          "timestamp": "2026-11-05T00:00:00Z",
+          "historical": false,
+          "wind_from_deg": 270.0,
+          "wind_speed_mps": 2.0
+        },
+        {
+          "id": "moderate",
+          "name": "moderate",
+          "source": "synthetic scenario; not observed weather",
+          "timestamp": "2026-11-05T00:00:00Z",
+          "historical": false,
+          "wind_from_deg": 180.0,
+          "wind_speed_mps": 6.0
+        },
+        {
+          "id": "strong",
+          "name": "strong",
+          "source": "synthetic scenario; not observed weather",
+          "timestamp": "2026-11-05T00:00:00Z",
+          "historical": false,
+          "wind_from_deg": 90.0,
+          "wind_speed_mps": 12.0
+        }
+      ],
+      "environment": {
+        "name": "Synthetic Seoul block",
+        "size": {
+          "x": 160.0,
+          "y": 160.0,
+          "z": 80.0
+        },
+        "source": "synthetic",
+        "obstacles": [
+          {
+            "maximum": {
+              "x": 100.0,
+              "y": 105.0,
+              "z": 55.0
+            },
+            "minimum": {
+              "x": 60.0,
+              "y": 55.0,
+              "z": 0.0
+            }
+          }
+        ],
+        "origin_alt": 0.0,
+        "origin_lat": 37.5665,
+        "origin_lon": 126.978,
+        "resolution": 10.0,
+        "risk_fields": [
+          {
+            "risk": 0.5,
+            "maximum": {
+              "x": 100.0,
+              "y": 150.0,
+              "z": 80.0
+            },
+            "minimum": {
+              "x": 30.0,
+              "y": 100.0,
+              "z": 0.0
+            },
+            "uncertainty": 0.2
+          }
+        ],
+        "no_fly_zones": [
+          {
+            "maximum": {
+              "x": 145.0,
+              "y": 140.0,
+              "z": 80.0
+            },
+            "minimum": {
+              "x": 120.0,
+              "y": 110.0,
+              "z": 0.0
+            }
+          }
+        ],
+        "model_version": "conservative-box-v1"
+      }
+    },
+    "code_hash": "f1fd7cecdd130d8e9e720040e432aca9b02936a7219bec53a46922319fba1b18",
+    "data_kind": "simulation",
+    "created_at": "2026-11-08T11:07:33.616592+00:00",
+    "input_hash": "085da4f8f2a44da78760b7ef671c4c680fa683c78769450392b9dc87795644dc",
+    "simulator_version": "p0-1.0",
+    "runs": [
+      {
+        "id": "00de5bab-344a-477d-bb4a-1d6ab228af23",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": true,
+          "time_s": 19.433311174102084,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.734843429098381,
+          "distance_m": 184.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.38511132204261556,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "0c2b94d5-fb16-4531-b359-a535c52a6bb1",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": true,
+          "time_s": 14.184207593999522,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.7711033796331744,
+          "distance_m": 164.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.0936964865759589,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "weak"
+      },
+      {
+        "id": "0c7da3ae-d78b-4181-b951-2fb0a5ddd0d3",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": true,
+          "time_s": 14.140036736993107,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.7716111059468144,
+          "distance_m": 164.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.0955812449481646,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "weak"
+      },
+      {
+        "id": "0fd9cc93-f167-4dc2-ab1d-7cb1e47135d6",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": true,
+          "time_s": 19.162268376562515,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.6554971284046445,
+          "distance_m": 184.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.3655605805382738,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "1b66fceb-02b2-46a8-a153-8fc20fb34cd3",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "strong"
+      },
+      {
+        "id": "1dd7094f-fa93-4f16-81dc-4b5f8d94733b",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.188103623944635,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.3985483627050965,
+          "distance_m": 164.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.3088221311951224,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "20e68b21-797d-4e7c-b5f3-b6960cf3fc17",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": true,
+          "time_s": 14.744518715008285,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.8045972301172665,
+          "distance_m": 170.71067811865476,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.09966731212621253,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "weak"
+      },
+      {
+        "id": "31c38a4e-5e14-4a33-9c52-29f0d1b0755e",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": true,
+          "time_s": 14.787819845927554,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.8039178632315815,
+          "distance_m": 170.71067811865476,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.0976837623462166,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "weak"
+      },
+      {
+        "id": "474d23a6-54dd-45b1-8da2-18716cc65e94",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.339994949952352,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.458698037429813,
+          "distance_m": 164.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.3238108524568802,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "4b04a4a8-e479-46d8-a2fa-5ad8b8ecf5c2",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.445843228893523,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.4985977025278072,
+          "distance_m": 164.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.3335028471165602,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "51f7005f-d5ff-4968-bcdf-c7418f35ee0d",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": true,
+          "time_s": 17.14565676248287,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.5306207833284484,
+          "distance_m": 170.71067811865476,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.33977671040888785,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "5e8aad1c-c9fe-4ca5-ada1-5f29ce56fb8f",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "strong"
+      },
+      {
+        "id": "60a01fa6-811a-42ec-acde-aa6e62b9ca2a",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.224675126115343,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.8820303665388011,
+          "distance_m": 184.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.10717518374424125,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "weak"
+      },
+      {
+        "id": "6bc0d68b-4d64-4cd8-9a15-c9fcb8831fb1",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "strong"
+      },
+      {
+        "id": "8b0ffd28-6ac6-4ab7-b612-44583470ec19",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "strong"
+      },
+      {
+        "id": "8d0a2228-25dd-4473-b250-dc4fec1e9c4f",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.97149835447416,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.4662286446692723,
+          "distance_m": 170.71067811865476,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.32376703369076165,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "9f70f303-943f-4ce8-a44d-0079f6f2aeb0",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": true,
+          "time_s": 17.266595890091786,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.5733873034802452,
+          "distance_m": 170.71067811865476,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.3501467701722788,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "a0b764ae-c01d-4acd-879b-7f9cf15c1bc0",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.293165853265496,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.880543489668409,
+          "distance_m": 184.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.1036088047455297,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "weak"
+      },
+      {
+        "id": "a81641e7-e839-487c-a17c-941267049261",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "strong"
+      },
+      {
+        "id": "c3656e9f-33b1-4d1e-9918-68d0a45dba8d",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": true,
+          "time_s": 14.858013537208976,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.8029825024442575,
+          "distance_m": 170.71067811865476,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.09448262156949622,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "weak"
+      },
+      {
+        "id": "c8429088-178c-4be7-a039-1de84f85377a",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "strong"
+      },
+      {
+        "id": "c8a6d36c-0f5d-4956-9048-f2fb28be6d5d",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": true,
+          "time_s": 19.62099430799343,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 1.7879275986050147,
+          "distance_m": 184.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.39789127099771643,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "moderate"
+      },
+      {
+        "id": "cfc556b6-54b3-488b-9373-6223c9b166cd",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": true,
+          "time_s": 14.255747776030748,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.7704338130224659,
+          "distance_m": 164.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.09065279278012521,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 10.606601717798213
+        },
+        "route_id": "075ac86d-736b-4026-95b4-5a671bdafd53",
+        "weather_id": "weak"
+      },
+      {
+        "id": "d6719132-37ed-43b7-b5c6-52c1b5cf1f54",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 17.67766952966369
+        },
+        "route_id": "b4b5c427-8c2c-4eec-83c9-ecab53948a1c",
+        "weather_id": "strong"
+      },
+      {
+        "id": "e2032eff-d28c-4b55-807c-a2e2806eb135",
+        "seed": 42,
+        "repeat": 0,
+        "metrics": {
+          "safe": true,
+          "time_s": 16.18247335412171,
+          "arrived": true,
+          "coverage": 1.0,
+          "energy_wh": 0.883065326772552,
+          "distance_m": 184.8528137423857,
+          "failure_reasons": [],
+          "risk_exposure_s": 0.10938733599474156,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "weak"
+      },
+      {
+        "id": "f05b84cf-7e32-46c5-8021-26104d64bad1",
+        "seed": 43,
+        "repeat": 1,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "strong"
+      },
+      {
+        "id": "f383e9f0-ce09-45d8-b03c-378edff06a81",
+        "seed": 44,
+        "repeat": 2,
+        "metrics": {
+          "safe": false,
+          "time_s": 0.0,
+          "arrived": false,
+          "coverage": 1.0,
+          "energy_wh": 0.0,
+          "distance_m": 0.0,
+          "failure_reasons": [
+            "insufficient_ground_speed"
+          ],
+          "risk_exposure_s": 0.0,
+          "risk_voxel_ratio": 0.0,
+          "minimum_clearance_m": 24.748737341529164
+        },
+        "route_id": "37e5e205-046c-4861-a2d9-27078e9c3753",
+        "weather_id": "strong"
+      }
+    ],
+    "evaluations": [
+      {
+        "id": "dfdf9fc6-3122-43d2-8476-6325b2261bfb",
+        "reason": "모든 선택 기상에서 제약을 충족하는 후보가 없습니다.",
+        "scores": {},
+        "weights": {
+          "time_s": 0.4,
+          "energy_wh": 0.3,
+          "distance_m": 0.2,
+          "risk_exposure_s": 0.1
+        },
+        "scenario_results": {
+          "weak": {
+            "reason": "모든 선택 기상·반복에서 안전 및 예산을 통과한 후보의 임무별 정규화 점수 비교",
+            "scores": {
+              "075ac86d-736b-4026-95b4-5a671bdafd53": 100.0,
+              "37e5e205-046c-4861-a2d9-27078e9c3753": 0.0,
+              "b4b5c427-8c2c-4eec-83c9-ecab53948a1c": 70.47849
+            },
+            "weights": {
+              "time_s": 0.4,
+              "energy_wh": 0.3,
+              "distance_m": 0.2,
+              "risk_exposure_s": 0.1
+            },
+            "excluded_route_ids": [],
+            "recommended_route_id": "075ac86d-736b-4026-95b4-5a671bdafd53"
+          },
+          "strong": {
+            "reason": "모든 선택 기상에서 제약을 충족하는 후보가 없습니다.",
+            "scores": {},
+            "weights": {
+              "time_s": 0.4,
+              "energy_wh": 0.3,
+              "distance_m": 0.2,
+              "risk_exposure_s": 0.1
+            },
+            "excluded_route_ids": [
+              "075ac86d-736b-4026-95b4-5a671bdafd53",
+              "37e5e205-046c-4861-a2d9-27078e9c3753",
+              "b4b5c427-8c2c-4eec-83c9-ecab53948a1c"
+            ],
+            "recommended_route_id": null
+          },
+          "moderate": {
+            "reason": "모든 선택 기상·반복에서 안전 및 예산을 통과한 후보의 임무별 정규화 점수 비교",
+            "scores": {
+              "075ac86d-736b-4026-95b4-5a671bdafd53": 100.0,
+              "37e5e205-046c-4861-a2d9-27078e9c3753": 0.0,
+              "b4b5c427-8c2c-4eec-83c9-ecab53948a1c": 73.285744
+            },
+            "weights": {
+              "time_s": 0.4,
+              "energy_wh": 0.3,
+              "distance_m": 0.2,
+              "risk_exposure_s": 0.1
+            },
+            "excluded_route_ids": [],
+            "recommended_route_id": "075ac86d-736b-4026-95b4-5a671bdafd53"
+          }
+        },
+        "excluded_route_ids": [
+          "075ac86d-736b-4026-95b4-5a671bdafd53",
+          "37e5e205-046c-4861-a2d9-27078e9c3753",
+          "b4b5c427-8c2c-4eec-83c9-ecab53948a1c"
+        ],
+        "recommended_route_id": null
+      }
+    ]
+  }
+}

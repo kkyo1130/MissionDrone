@@ -1,0 +1,13 @@
+{
+  "station": "47112099999",
+  "samples": 8431,
+  "train_samples": 6744,
+  "test_samples": 1687,
+  "test_start_utc": "2024-10-17T00:00",
+  "baseline_mae_mps": 0.8849911084765857,
+  "corrected_mae_mps": 0.6606676158389307,
+  "baseline_rmse_mps": 1.1515240796383543,
+  "corrected_rmse_mps": 0.8640188040894704,
+  "data_kind": "station_observations_vs_ERA5_reanalysis",
+  "scope": "station-level wind bias correction; not validated for urban-canyon voxels"
+}
