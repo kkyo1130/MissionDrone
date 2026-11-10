@@ -210,6 +210,44 @@ let currentWindDirection = windDirectionInput.value.trim() ? Number(windDirectio
 // clicks on extruded buildings resolve to a stable ground footprint.
 let activeMapPick = null;
 const pickedMarkers = {start: null, end: null};
+const pointChecks = {start: null, end: null};
+let pointCheckSerial = 0;
+const routeButtons = ['btnRoute', 'btnCandidates'].map(id => document.getElementById(id));
+function refreshPointButtons() {
+  const ready = pointChecks.start?.valid === true && pointChecks.end?.valid === true;
+  routeButtons.forEach(button => { if (button) button.disabled = !ready; });
+}
+async function checkPickedPoint(kind, point, showFeedback = true) {
+  const serial = ++pointCheckSerial;
+  pointChecks[kind] = null;
+  refreshPointButtons();
+  const response = await fetch('/api/points/check', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({point, min_altitude_m: Number(document.getElementById('minAltitude').value),
+      max_altitude_m: Number(document.getElementById('maxAltitude').value)})
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.detail || '지점 검사 실패');
+  if (serial !== pointCheckSerial) return;
+  pointChecks[kind] = {valid: result.valid, point: point.join(',')};
+  const marker = pickedMarkers[kind];
+  if (marker) marker.point.color = result.valid ? Cesium.Color.LIME : Cesium.Color.RED;
+  if (showFeedback) {
+    mapPickStatus.textContent = result.valid
+      ? (kind === 'start' ? '출발점' : '도착점') + ' 비행 가능 ✓ · ' + point.join(',')
+      : '⚠ 선택 불가: ' + result.reason + (result.suggested_point ? ' · 추천 좌표 ' + result.suggested_point.join(',') + ' (입력란에 적용 가능)' : ' · 주변 안전 좌표 없음');
+    mapPickStatus.style.color = result.valid ? '#86efac' : '#fca5a5';
+  }
+  refreshPointButtons();
+}
+function recheckEndpoints() {
+  for (const [kind, input] of [['start', startInput], ['end', endInput]]) {
+    try { checkPickedPoint(kind, parsePoint(input.value), false).catch(() => {pointChecks[kind] = null; refreshPointButtons();}); }
+    catch { pointChecks[kind] = null; }
+  }
+  refreshPointButtons();
+}
+
 const mapPickStatus = document.getElementById('mapPickStatus');
 const pickStartButton = document.getElementById('btnPickStart');
 const pickEndButton = document.getElementById('btnPickEnd');
@@ -226,7 +264,7 @@ function setMapPickMode(mode) {
 pickStartButton.addEventListener('click', () => setMapPickMode('start'));
 pickEndButton.addEventListener('click', () => setMapPickMode('end'));
 document.getElementById('btnCancelPick').addEventListener('click', () => setMapPickMode(null));
-mapPickHandler.setInputAction((event) => {
+mapPickHandler.setInputAction(async (event) => {
   if (!activeMapPick) return;
   // Pick the visible building/terrain surface when available. Unlike globe.pick,
   // pickPosition preserves the horizontal location of a clicked 3D building.
@@ -285,8 +323,10 @@ mapPickHandler.setInputAction((event) => {
     },
   });
   setMapPickMode(null);
-  mapPickStatus.textContent = name + ' 설정 완료: ' + point.join(',') +
-    ' · 비행 고도 ' + ((z + 0.5) * gridSpec.voxelSizeM) + 'm (10m 격자 중심). 정확한 높이는 좌표의 z를 수정하세요.';
+  mapPickStatus.textContent = name + ' 안전성 확인 중...';
+  try { await checkPickedPoint(kind, point); }
+  catch (error) { mapPickStatus.textContent = '검사 실패: ' + error.message; mapPickStatus.style.color = '#fca5a5'; }
+
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 function parsePoint(text) {
@@ -1213,6 +1253,10 @@ windDirectionInput.addEventListener('change', () => {
 });
 refreshHud();
 
+for (const input of [startInput, endInput, document.getElementById('minAltitude'), document.getElementById('maxAltitude')]) {
+  input.addEventListener('change', recheckEndpoints);
+}
+recheckEndpoints();
 loadEnvironment().catch((error) => {
   statusEl.textContent = `지도 레이어 로드 실패: ${error.message}`;
 });
