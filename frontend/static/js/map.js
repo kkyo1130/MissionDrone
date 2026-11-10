@@ -419,6 +419,36 @@ function renderOsmBuilding(building, index) {
   obstacleEntities.push(entity);
 }
 
+async function importLocalBuildings() {
+  const button = document.getElementById('btnLocalBuildings');
+  const label = document.getElementById('osmImportStatus');
+  const file = document.getElementById('localBuildingsFile').files[0];
+  if (!file) {
+    label.textContent = '먼저 실제 건물 GeoJSON 파일을 선택하세요.';
+    return;
+  }
+  button.disabled = true;
+  label.textContent = '로컬 건물 데이터를 검증하고 저장하는 중...';
+  try {
+    const geojson = JSON.parse(await file.text());
+    const center_lon = Number(document.getElementById('osmCenterLon').value);
+    const center_lat = Number(document.getElementById('osmCenterLat').value);
+    const response = await fetch('/api/environment/local', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({center_lon, center_lat, geojson}),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(formatApiError(result.detail));
+    label.textContent = '로컬 실제 건물 ' + result.buildings_count + '개 저장 완료 · 화면 새로고침 중';
+    window.location.reload();
+  } catch (error) {
+    label.textContent = '로컬 건물 파일 적용 실패: ' + error.message;
+    button.disabled = false;
+  }
+}
+document.getElementById('btnLocalBuildings').addEventListener('click', importLocalBuildings);
+
 async function importOsmStudyArea() {
   const button = document.getElementById('btnOsmBuildings');
   const label = document.getElementById('osmImportStatus');
@@ -464,14 +494,9 @@ async function loadEnvironment() {
       data.blocked_voxels.length + '개 · 미등록 건물/높이 추정 주의';
   } else {
     const label = document.getElementById('osmImportStatus');
-    label.textContent = '송도 실제 OSM 건물을 자동으로 불러오는 중입니다. 잠시 기다려 주세요.';
+    label.textContent = '실제 건물 파일이 없습니다. OSM GeoJSON 파일을 선택해 로컬 저장 및 3D 적용을 눌러주세요.';
     obstacleCount = 0;
     updateLayerStatus();
-    // Fetch after the UI has loaded, rather than blocking FastAPI startup.
-    // A failed request keeps the map usable and leaves the manual retry button.
-    if (!document.getElementById('btnOsmBuildings').disabled) {
-      void importOsmStudyArea();
-    }
     return;
   }
   // Real OSM building meshes are the city itself, not optional voxel overlays.
