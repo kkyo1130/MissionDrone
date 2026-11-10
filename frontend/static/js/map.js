@@ -282,6 +282,41 @@ function setMapPickMode(mode) {
 pickStartButton.addEventListener('click', () => setMapPickMode('start'));
 pickEndButton.addEventListener('click', () => setMapPickMode('end'));
 document.getElementById('btnCancelPick').addEventListener('click', () => setMapPickMode(null));
+async function buildBuildingMissionPoints(building, missionKind) {
+  if (!building || !['inspection', 'disaster'].includes(missionKind)) return [];
+  const lonScale = 111320 * Math.cos(Cesium.Math.toRadians(gridOriginWgs84[1]));
+  const xs = building.coordinates.map(p => (p[0] - gridOriginWgs84[0]) * lonScale / gridSpec.voxelSizeM);
+  const ys = building.coordinates.map(p => (p[1] - gridOriginWgs84[1]) * 111132 / gridSpec.voxelSizeM);
+  const left = Math.min(...xs), right = Math.max(...xs);
+  const bottom = Math.min(...ys), top = Math.max(...ys);
+  const centerX = Math.floor((left + right) / 2);
+  const centerY = Math.floor((bottom + top) / 2);
+  const minZ = Math.max(0, Math.ceil((Number(document.getElementById('minAltitude').value) - 5) / gridSpec.voxelSizeM));
+  const maxZ = Math.min(gridSpec.shape[2] - 1, Math.floor((Number(document.getElementById('maxAltitude').value) - 5) / gridSpec.voxelSizeM));
+  const roofZ = Math.ceil(Number(building.height_m) / gridSpec.voxelSizeM);
+  const z = Math.min(maxZ, Math.max(minZ, missionKind === 'inspection' ? Math.floor(roofZ / 2) : roofZ));
+  const offset = missionKind === 'inspection' ? 2 : 4;
+  const candidates = [
+    [centerX, Math.floor(bottom) - offset, z],
+    [Math.ceil(right) + offset, centerY, z],
+    [centerX, Math.ceil(top) + offset, z],
+    [Math.floor(left) - offset, centerY, z],
+  ];
+  const safe = [];
+  for (const point of candidates) {
+    if (point.some((v, i) => v < 0 || v >= gridSpec.shape[i])) continue;
+    const response = await fetch('/api/points/check', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({point, min_altitude_m: Number(document.getElementById('minAltitude').value),
+        max_altitude_m: Number(document.getElementById('maxAltitude').value)})
+    });
+    if (!response.ok) continue;
+    const result = await response.json();
+    if (result.valid) safe.push(point);
+    else if (result.suggested_point && !safe.some(p => p.join() === result.suggested_point.join())) safe.push(result.suggested_point);
+  }
+  return safe.filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i);
+}
 mapPickHandler.setInputAction(async (event) => {
   if (!activeMapPick) return;
   // Pick the visible building/terrain surface when available. Unlike globe.pick,
@@ -354,7 +389,19 @@ mapPickHandler.setInputAction(async (event) => {
   });
   setMapPickMode(null);
   mapPickStatus.textContent = name + (roofAltitude !== null ? ' · 옥상 높이 ' + roofAltitude + 'm' : '') + ' 안전성 확인 중...';
-  try { await checkPickedPoint(kind, point); }
+  try {
+    await checkPickedPoint(kind, point);
+    if (building && ['inspection', 'disaster'].includes(missionKind)) {
+      const points = await buildBuildingMissionPoints(building, missionKind);
+      if (points.length) {
+        const field = missionKind === 'inspection' ? 'targetPoints' : 'searchArea';
+        document.getElementById(field).value = points.map(p => p.join(',')).join('; ');
+        document.getElementById('waypoints').value = points.map(p => p.join(',')).join('; ');
+        document.getElementById('requiredWaypoints').value = points.map(p => p.join(',')).join('; ');
+        mapPickStatus.textContent += ' · ' + (missionKind === 'inspection' ? '외벽 주변 점검' : '재난 현장 주변 수색') + ' 경유지 ' + points.length + '개 자동 설정';
+      } else mapPickStatus.textContent += ' · 안전한 건물 주변 경유지를 찾지 못했습니다.';
+    }
+  }
   catch (error) { mapPickStatus.textContent = '검사 실패: ' + error.message; mapPickStatus.style.color = '#fca5a5'; }
 
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
