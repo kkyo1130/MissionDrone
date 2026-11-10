@@ -570,6 +570,65 @@ def get_routes_api(mission_id: str) -> Dict[str, Any]:
         }
 
 
+class PointCheckRequest(BaseModel):
+    point: Tuple[int, int, int]
+    min_altitude_m: float = 0
+    max_altitude_m: float = 360
+    clearance_m: float = 0
+    drone_radius_m: float = 0
+    position_error_m: float = 0
+
+
+@app.post("/api/points/check")
+def check_flight_point(payload: PointCheckRequest) -> Dict[str, Any]:
+    """Validate a selected endpoint with the same clearance geometry as route generation."""
+    from app.core.routing import _transition_is_clear
+
+    point = tuple(payload.point)
+    shape = OCCUPANCY.shape
+    radius_m = max(0.0, payload.clearance_m + payload.drone_radius_m + payload.position_error_m)
+    radius = radius_m / GRID_SPEC.voxel_size_m
+
+    def reason_for(candidate):
+        if any(v < 0 or v >= limit for v, limit in zip(candidate, shape)):
+            return "연구 영역 밖입니다."
+        altitude = (candidate[2] + 0.5) * GRID_SPEC.voxel_size_m
+        if not payload.min_altitude_m <= altitude <= payload.max_altitude_m:
+            return "임무 비행 고도 범위를 벗어났습니다."
+        if OCCUPANCY[candidate] == 0:
+            return "건물 내부 또는 장애물 복셀입니다."
+        margin = int(np.ceil(radius)) + 2
+        slices = tuple(slice(max(0, v-margin), min(limit, v+margin+1))
+                       for v, limit in zip(candidate, shape))
+        local = tuple(v - sl.start for v, sl in zip(candidate, slices))
+        if not _transition_is_clear(OCCUPANCY[slices], local, radius):
+            return "건물과의 안전거리가 부족합니다."
+        return None
+
+    reason = reason_for(point)
+    suggestion = None
+    if reason is not None:
+        # Prefer nearby horizontal positions at the requested flight altitude.
+        # Search vertical alternatives only if no horizontal alternative exists.
+        for vertical in (False, True):
+            candidates = []
+            for dx in range(-8, 9):
+                for dy in range(-8, 9):
+                    for dz in (range(-5, 6) if vertical else (0,)):
+                        candidate = (point[0]+dx, point[1]+dy, point[2]+dz)
+                        if not all(0 <= v < limit for v, limit in zip(candidate, shape)):
+                            continue
+                        candidates.append((dx*dx+dy*dy+dz*dz, candidate))
+            for _, candidate in sorted(candidates, key=lambda item: item[0]):
+                if reason_for(candidate) is None:
+                    suggestion = list(candidate)
+                    break
+            if suggestion is not None:
+                break
+    return {"valid": reason is None, "reason": reason, "point": list(point),
+            "suggested_point": suggestion}
+
+
 @app.get("/api/risk-map")
 def risk_map_api(
     wind_speed: float = Query(default=8.0, ge=0.0, le=60.0),
