@@ -372,12 +372,12 @@
         <button id="btnExperiment" type="button" class="secondary" disabled>기상 조건별 반복 시뮬레이션</button>
         <div id="experimentSummary" class="mission-help" role="status"></div>
         <button id="btnRisk" class="secondary" type="button">Load Risk Voxels</button>
-        <h2>송도 실제 건물 가져오기 (OSM)</h2>
-        <p class="mission-help">중심 좌표 기준 320m × 320m 범위에서 OSM 건물 윤곽을 조회해 3D로 표시하고, 동일 건물의 점유 복셀을 항로 탐색에 적용합니다.</p>
+        <h2>송도 아파트 밀집 지역 건물 데이터</h2>
+        <p class="mission-help">중심 좌표 기준 800m × 800m 범위에서 OSM 건물 윤곽을 조회해 3D로 표시하고, 동일 건물의 점유 복셀을 항로 탐색에 적용합니다.</p>
         <div class="group"><label for="osmCenterLon">중심 경도</label>
-          <input id="osmCenterLon" type="number" min="126.60" max="126.70" step="0.00001" value="126.6442" /></div>
+          <input id="osmCenterLon" type="number" min="126.60" max="126.70" step="0.00001" value="126.6465" /></div>
         <div class="group"><label for="osmCenterLat">중심 위도</label>
-          <input id="osmCenterLat" type="number" min="37.34" max="37.43" step="0.00001" value="37.3893" /></div>
+          <input id="osmCenterLat" type="number" min="37.34" max="37.43" step="0.00001" value="37.3926" /></div>
         <div class="group"><label for="localBuildingsFile">로컬 OSM 건물 GeoJSON 파일</label>
           <input id="localBuildingsFile" type="file" accept=".geojson,.json,application/geo+json,application/json" /></div>
         <button type="button" id="btnLocalBuildings" class="secondary">로컬 건물 파일 저장 및 3D 적용</button>
