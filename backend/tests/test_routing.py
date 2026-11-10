@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.core.pathfinding import find_path_weighted_astar
 from app.core.routing import _mission_penalty_map
-from app.main import OCCUPANCY, app
+from app.main import OCCUPANCY, GRID_SPEC, app
 from app.schemas.missions import DeliveryMission
 
 client = TestClient(app)
@@ -94,7 +94,7 @@ def test_no_fly_zones_and_unavailable_route_reason():
         json={
             "count": 3,
             "no_fly_zones": [
-                {"minimum": [0, 0, 0], "maximum": [31, 31, 11]}
+                {"minimum": [0, 0, 0], "maximum": [GRID_SPEC.width - 1, GRID_SPEC.depth - 1, GRID_SPEC.height - 1]}
             ],
         },
     )
@@ -119,7 +119,7 @@ def test_route_generation_rejects_bad_request_and_respects_battery():
 
     invalid_zone = client.post(
         f"/api/missions/{mission_id}/routes",
-        json={"no_fly_zones": [{"minimum": [32, 0, 0], "maximum": [32, 1, 1]}]},
+        json={"no_fly_zones": [{"minimum": [GRID_SPEC.width, 0, 0], "maximum": [GRID_SPEC.width, 1, 1]}]},
     )
     assert invalid_zone.status_code == 422
 
