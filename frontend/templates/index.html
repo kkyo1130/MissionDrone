@@ -244,6 +244,15 @@
           <input id="start" value="2,2,6" />
         </div>
         <div class="group">
+          <label>지도 클릭으로 출발·도착 선택</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="btnPickStart" type="button" class="secondary">📍 출발점 선택</button>
+            <button id="btnPickEnd" type="button" class="secondary">🏁 도착점 선택</button>
+            <button id="btnCancelPick" type="button" class="secondary">선택 취소</button>
+          </div>
+          <p id="mapPickStatus" class="mission-help" role="status">버튼을 누른 뒤 3D 지도에서 위치를 클릭하세요. 기본 비행 고도는 60m입니다.</p>
+        </div>
+        <div class="group">
           <label for="end">End (x,y,z)</label>
           <input id="end" value="28,28,6" />
         </div>
