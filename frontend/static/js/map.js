@@ -767,10 +767,14 @@ droneStatusPanel.addEventListener('mouseenter', () => {
 });
 droneStatusPanel.addEventListener('mouseleave', scheduleDronePanelHide);
 viewer.screenSpaceEventHandler.setInputAction((movement) => {
-  if (!droneMarker) return;
-  const picked = viewer.scene.pick(movement.endPosition);
-  const entity = Cesium.defined(picked) ? picked.id : null;
-  if (entity === droneMarker || droneParts.includes(entity)) {
+  if (!droneMarker || !playbackCenter) return;
+  const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
+  if (!screen) return;
+  const dx = movement.endPosition.x - screen.x;
+  const dy = movement.endPosition.y - screen.y;
+  // Screen-space proximity also works when route pins or 3D building polygons
+  // intercept Cesium's object picking.
+  if (dx * dx + dy * dy <= 48 * 48) {
     showDronePanel();
   } else if (!droneStatusPanel.hidden && !droneHoverTimer) {
     scheduleDronePanelHide();
