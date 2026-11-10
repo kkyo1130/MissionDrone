@@ -202,8 +202,9 @@
       .playback-controls{position:absolute;z-index:35;left:50%;top:84px;transform:translateX(-50%);display:flex;align-items:center;gap:7px;background:#0a1b39ed;border:1px solid #3b5781;border-radius:12px;padding:8px;box-shadow:0 12px 30px #0005;white-space:nowrap}
       .playback-controls button{width:auto;padding:9px 11px;background:#193b6c;border:1px solid #365d94;border-radius:8px;color:#edf5ff;font-size:.78rem;cursor:pointer}
       .playback-controls button:disabled{opacity:.4;cursor:not-allowed}
-      .drone-status-panel{position:absolute;z-index:90;min-width:235px;padding:14px;background:#0b1b38f5;border:1px solid #4e83b8;border-radius:12px;color:#fff;box-shadow:0 12px 32px #0009;font-size:13px;pointer-events:auto}
+      .drone-status-panel{position:absolute;z-index:90;top:145px;right:16px;min-width:235px;padding:14px;background:#0b1b38f5;border:1px solid #4e83b8;border-radius:12px;color:#fff;box-shadow:0 12px 32px #0009;font-size:13px;pointer-events:auto}
       .drone-status-panel[hidden]{display:none}
+      @media(max-width:760px){.drone-status-panel{top:190px;right:8px;min-width:210px;max-width:calc(100vw - 16px);padding:10px}}
       .drone-status-panel strong{display:flex;justify-content:space-between;gap:12px}
       .drone-status-panel small{color:#a8c7f1;font-weight:400}
       .drone-status-panel p{margin:9px 0;color:#dbeafe}
@@ -427,7 +428,7 @@
         <span id="playbackProgress" role="status">재생 대기</span>
       </div>
       <div class="route-caption" id="routeCaption" role="status">항로 탐색 대기</div>
-      <div id="droneStatusPanel" hidden class="drone-status-panel" role="group" aria-label="드론 상태 및 비행 제어">
+      <div id="droneStatusPanel" class="drone-status-panel" role="group" aria-label="드론 상태 및 비행 제어">
         <strong>드론 상태 <small>모의 비행</small></strong>
         <p id="droneStatusText">출발 대기</p>
         <p id="droneBatteryText">예상 배터리 100%</p>
