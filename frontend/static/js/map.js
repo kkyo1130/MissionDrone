@@ -647,14 +647,50 @@ const droneStatusPanel = document.getElementById('droneStatusPanel');
 const droneStatusText = document.getElementById('droneStatusText');
 const droneBatteryText = document.getElementById('droneBatteryText');
 let selectedRouteEnergyWh = null;
-// Keep the flight dashboard pinned on screen instead of hiding on hover.
+// The drone is created only after a route is ready. Hovering the drone
+// reveals flight controls; moving onto the panel keeps it open.
+let droneHoverTimer = null;
 function showDronePanel() {
-  droneStatusPanel.hidden = false;
+  if (!droneMarker || !playbackCenter) return;
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = null;
   updateDroneStatus();
+  const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
+  if (screen) {
+    const bounds = viewer.scene.canvas.getBoundingClientRect();
+    const parent = droneStatusPanel.offsetParent.getBoundingClientRect();
+    const width = droneStatusPanel.offsetWidth || 250;
+    const height = droneStatusPanel.offsetHeight || 180;
+    const x = bounds.left - parent.left + screen.x + 22;
+    const y = bounds.top - parent.top + screen.y - 55;
+    droneStatusPanel.style.left = Math.max(8, Math.min(parent.width - width - 8, x)) + 'px';
+    droneStatusPanel.style.top = Math.max(8, Math.min(parent.height - height - 8, y)) + 'px';
+    droneStatusPanel.style.right = 'auto';
+  }
+  droneStatusPanel.hidden = false;
 }
 function scheduleDronePanelHide() {
-  // Intentionally persistent: the controls must remain accessible.
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = setTimeout(() => {
+    droneStatusPanel.hidden = true;
+    droneHoverTimer = null;
+  }, 600);
 }
+droneStatusPanel.addEventListener('mouseenter', () => {
+  clearTimeout(droneHoverTimer);
+  droneHoverTimer = null;
+});
+droneStatusPanel.addEventListener('mouseleave', scheduleDronePanelHide);
+viewer.screenSpaceEventHandler.setInputAction((movement) => {
+  if (!droneMarker) return;
+  const picked = viewer.scene.pick(movement.endPosition);
+  const entity = Cesium.defined(picked) ? picked.id : null;
+  if (entity === droneMarker || droneParts.includes(entity)) {
+    showDronePanel();
+  } else if (!droneStatusPanel.hidden && !droneHoverTimer) {
+    scheduleDronePanelHide();
+  }
+}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 let droneMarker = null;
 let playbackRunning = false;
 function updateDroneStatus() {
@@ -715,7 +751,7 @@ function clearRoutePlayback() {
   droneParts = [];
   droneMarker = null;
   playbackRunning = false;
-  droneStatusPanel.hidden = false;
+  droneStatusPanel.hidden = true;
   playbackProgress.textContent = '재생 대기';
 }
 
@@ -790,7 +826,7 @@ function prepareRoutePlayback(positions) {
   playbackElapsed = 0;
   setPlaybackControls(true);
   playbackProgress.textContent = '출발 대기 · 0%';
-  droneStatusPanel.hidden = false;
+  droneStatusPanel.hidden = true;
   const route = positions.length === 1 ? [positions[0], positions[0]] : positions;
   addRoutePin(route[0], '출발', Cesium.Color.fromCssColorString('#2c88ff'));
   addRoutePin(route[route.length - 1], '도착', Cesium.Color.fromCssColorString('#ffb900'));
@@ -801,7 +837,7 @@ function prepareRoutePlayback(positions) {
   playbackTotalDistance = playbackDistances[playbackDistances.length - 1];
   playbackCenter = Cesium.Cartesian3.clone(route[0]);
   droneMarker = viewer.entities.add({
-    name: '드론 · 클릭하여 상태 확인',
+    name: '드론 · 마우스를 올려 상태 확인',
     position: Cesium.Cartesian3.clone(playbackCenter),
     point: {
       pixelSize: 26, color: Cesium.Color.CYAN,
