@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import GRID_SPEC, app
 
 client = TestClient(app)
 
@@ -77,7 +77,7 @@ def test_mission_validation_rejects_invalid_constraints_and_weights():
     assert client.post("/api/missions", json=payload).status_code == 422
 
     payload = deepcopy(MISSION_CASES[2])
-    payload["constraints"]["max_altitude_m"] = 130
+    payload["constraints"]["max_altitude_m"] = GRID_SPEC.height * GRID_SPEC.voxel_size_m + 10
     assert client.post("/api/missions", json=payload).status_code == 422
 
     payload = deepcopy(MISSION_CASES[2])
@@ -94,7 +94,7 @@ def test_mission_validation_rejects_invalid_constraints_and_weights():
     assert client.post("/api/missions", json=payload).status_code == 422
 
     payload = deepcopy(MISSION_CASES[2])
-    payload["start"] = [32, 2, 6]
+    payload["start"] = [GRID_SPEC.width, 2, 6]
     assert client.post("/api/missions", json=payload).status_code == 422
 
     payload = deepcopy(MISSION_CASES[2])
