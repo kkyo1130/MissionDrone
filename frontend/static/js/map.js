@@ -206,6 +206,79 @@ let riskCount = 0;
 let currentWindSpeed = Number(windSpeedInput.value);
 let currentWindDirection = Number(windDirectionInput.value);
 
+// Click-to-pick route endpoints. Pick longitude/latitude on the ellipsoid so
+// clicks on extruded buildings resolve to a stable ground footprint.
+let activeMapPick = null;
+const pickedMarkers = {start: null, end: null};
+const mapPickStatus = document.getElementById('mapPickStatus');
+const pickStartButton = document.getElementById('btnPickStart');
+const pickEndButton = document.getElementById('btnPickEnd');
+const mapPickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+function setMapPickMode(mode) {
+  activeMapPick = mode;
+  viewer.canvas.style.cursor = mode ? 'crosshair' : '';
+  pickStartButton.disabled = mode === 'start';
+  pickEndButton.disabled = mode === 'end';
+  mapPickStatus.textContent = mode
+    ? (mode === 'start' ? '출발점' : '도착점') + ' 선택 중 · 지도에서 위치를 클릭하세요.'
+    : '지도 선택 대기 중 · 출발점 또는 도착점 선택 버튼을 누르세요.';
+}
+pickStartButton.addEventListener('click', () => setMapPickMode('start'));
+pickEndButton.addEventListener('click', () => setMapPickMode('end'));
+document.getElementById('btnCancelPick').addEventListener('click', () => setMapPickMode(null));
+mapPickHandler.setInputAction((event) => {
+  if (!activeMapPick) return;
+  const ray = viewer.camera.getPickRay(event.position);
+  const hit = ray && viewer.scene.globe.pick(ray, viewer.scene);
+  const cartographic = hit && Cesium.Cartographic.fromCartesian(hit);
+  if (!cartographic) {
+    mapPickStatus.textContent = '지도 표면을 선택할 수 없습니다. 다른 위치를 클릭하세요.';
+    return;
+  }
+  const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+  const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+  const lonScale = 111320 * Math.cos(Cesium.Math.toRadians(gridOriginWgs84[1]));
+  const x = Math.floor((longitude - gridOriginWgs84[0]) * lonScale / gridSpec.voxelSizeM);
+  const y = Math.floor((latitude - gridOriginWgs84[1]) * 111132 / gridSpec.voxelSizeM);
+  const previous = activeMapPick === 'start' ? startInput : endInput;
+  const currentZ = Number(previous.value.split(',')[2]);
+  const z = Number.isInteger(currentZ) && currentZ >= 0 && currentZ < gridSpec.shape[2]
+    ? currentZ : 6;
+  if (x < 0 || y < 0 || x >= gridSpec.shape[0] || y >= gridSpec.shape[1]) {
+    mapPickStatus.textContent = '선택 위치가 연구 지역 밖입니다. 800m 연구 지역 안을 클릭하세요.';
+    return;
+  }
+  const point = [x, y, z];
+  const name = activeMapPick === 'start' ? '출발점' : '도착점';
+  previous.value = point.join(',');
+  const kind = activeMapPick;
+  if (pickedMarkers[kind]) viewer.entities.remove(pickedMarkers[kind]);
+  pickedMarkers[kind] = viewer.entities.add({
+    name,
+    position: localMetersToCartesian((x + 0.5) * gridSpec.voxelSizeM,
+      (y + 0.5) * gridSpec.voxelSizeM, (z + 0.5) * gridSpec.voxelSizeM),
+    point: {
+      pixelSize: 15,
+      color: kind === 'start' ? Cesium.Color.LIME : Cesium.Color.RED,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 3,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+    label: {
+      text: kind === 'start' ? 'S 출발' : 'E 도착',
+      font: 'bold 15px sans-serif',
+      pixelOffset: new Cesium.Cartesian2(0, -28),
+      fillColor: Cesium.Color.WHITE,
+      showBackground: true,
+      backgroundColor: Cesium.Color.fromCssColorString('#173049'),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
+  setMapPickMode(null);
+  mapPickStatus.textContent = name + ' 설정 완료: ' + point.join(',') +
+    ' · 고도 ' + ((z + 0.5) * gridSpec.voxelSizeM) + 'm. 건물 내부라면 고도를 조정하세요.';
+}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
 function parsePoint(text) {
   const rawParts = text.split(',').map((value) => value.trim());
   const parts = rawParts.map((value) => Number(value));
