@@ -240,7 +240,7 @@
               <option value="delivery" selected>물류 배송</option>
             </select>
           </div>
-        <div class="group">
+        <div class="group" hidden>
           <label for="start">Start (x,y,z)</label>
           <input id="start" value="2,2,6" />
         </div>
@@ -251,9 +251,9 @@
             <button id="btnPickEnd" type="button" class="secondary">🏁 도착점 선택</button>
             <button id="btnCancelPick" type="button" class="secondary">선택 취소</button>
           </div>
-          <p id="mapPickStatus" class="mission-help" role="status">건물을 클릭하세요. 배송: 옥상 이착륙 지점 · 시설 점검: 외벽 주변 경유지 · 재난: 현장 주변 수색 지점 (모의 항로)</p>
+          <p id="mapPickStatus" class="mission-help" role="status" hidden></p>
         </div>
-        <div class="group">
+        <div class="group" hidden>
           <label for="end">End (x,y,z)</label>
           <input id="end" value="28,28,6" />
         </div>
@@ -278,9 +278,9 @@
         </div>
         <div class="group">
           <button id="btnApplyHistoricalWeather" type="button">과거 기상 데이터 적용</button>
-          <p id="historicalWeatherStatus" class="mission-help" role="status">기상 미적용 · NOAA 조회 또는 풍속·풍향 입력 후 위험도 생성</p>
+          <p id="historicalWeatherStatus" class="mission-help" role="status" hidden></p>
         </div>
-        <div class="mission-section">
+        <div class="mission-section" hidden>
           <h3>경유지</h3>
           <div class="group">
             <label for="waypoints">선택 경유지 (x,y,z)</label>
@@ -295,11 +295,11 @@
         <div class="mission-section">
           <h3>비행 제약</h3>
           <div class="form-grid">
-            <div class="group">
+            <div class="group" hidden>
               <label for="minAltitude">최소 고도 (m)</label>
               <input id="minAltitude" type="number" min="0" max="120" step="1" value="10" required />
             </div>
-            <div class="group">
+            <div class="group" hidden>
               <label for="maxAltitude">최대 고도 (m)</label>
               <input id="maxAltitude" type="number" min="1" max="120" step="1" value="100" required />
             </div>
@@ -382,6 +382,8 @@
         <button id="btnExperiment" type="button" class="secondary" disabled>기상 조건별 반복 시뮬레이션</button>
         <div id="experimentSummary" class="mission-help" role="status"></div>
         <button id="btnRisk" class="secondary" type="button">Load Risk Voxels</button>
+        <!-- Keep building controls available to map.js while hiding this setup UI. -->
+        <div hidden>
         <h2>송도 아파트 밀집 지역 건물 데이터</h2>
         <p class="mission-help">중심 좌표 기준 800m × 800m 범위에서 OSM 건물 윤곽을 조회해 3D로 표시하고, 동일 건물의 점유 복셀을 항로 탐색에 적용합니다.</p>
         <div class="group"><label for="osmCenterLon">중심 경도</label>
@@ -394,6 +396,7 @@
         <p class="mission-help">OSM에서 내보낸 건물 Polygon GeoJSON을 한 번 등록하면 backend/data/songdo_buildings.geojson에 저장되어 다음 실행부터 인터넷 없이 로딩됩니다.</p>
                 <button type="button" id="btnOsmBuildings" class="secondary">선택 범위 실제 3D 건물 적용</button>
         <p class="mission-help" id="osmImportStatus" role="status">OSM 공개 건물 데이터 · 높이 미등록 시 추정값 사용 · 실제 비행 안전 검증 불가</p>
+        </div>
         <h2>지도 레이어</h2>
         <label class="layer-control">
           <input id="showObstacles" type="checkbox" checked />
