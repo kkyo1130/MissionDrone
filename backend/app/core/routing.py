@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -227,7 +228,10 @@ def generate_route_candidates(
     origin_wgs84: Tuple[float, float, float],
     count: int,
     no_fly_zones: List[NoFlyZone],
+    time_budget_s: Optional[float] = None,
 ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    deadline = None if time_budget_s is None else time.monotonic() + time_budget_s
+    timed_out = False
     planning_grid = occupancy.copy()
     for zone in no_fly_zones:
         if any(
@@ -291,44 +295,64 @@ def generate_route_candidates(
     overlap_penalty = np.zeros_like(risk_map, dtype=np.float32)
     anchor_set = set(anchors)
     transition_cache = {}
-    for variant in range(count * len(_RISK_VARIANTS)):
+    segment_cache = {}
+    # Search progressively: first prefer separated routes, then accept similar
+    # but genuinely different safe routes. Never duplicate an identical path.
+    for variant in range(count * len(_RISK_VARIANTS) * 4):
+        if deadline is not None and time.monotonic() >= deadline:
+            timed_out = True
+            break
         risk_factor = weights.risk * _RISK_VARIANTS[variant % len(_RISK_VARIANTS)]
         path = [anchors[0]]
         for start, end in zip(anchors, anchors[1:]):
             previous = path[-2] if len(path) > 1 else None
-            leg = find_path_weighted_astar(
-                planning_grid,
-                risk_map,
-                start,
-                end,
-                previous=previous,
-                mission_penalty_map=mission_penalties,
-                mission_penalty_factor=_MISSION_PENALTY_FACTOR,
-                distance_time_cost_factor=weights.distance + weights.time,
-                energy_cost_factor=weights.energy,
-                energy_base_power_w=energy_base_power_w,
-                risk_cost_factor=risk_factor,
-                overlap_penalty=overlap_penalty,
-                overlap_penalty_factor=2.0,
-                clearance_voxels=clearance_voxels,
-                max_turn_deg=mission.constraints.max_turn_deg,
-                max_climb_fraction=(
-                    mission.constraints.climb_rate_mps / mission.constraints.speed_mps
-                ),
-                min_altitude_index=minimum_altitude_index,
-                max_altitude_index=maximum_altitude_index,
-                transition_cache=transition_cache,
-            )
+            try:
+                leg = find_path_weighted_astar(
+                    planning_grid,
+                    risk_map,
+                    start,
+                    end,
+                    previous=previous,
+                    mission_penalty_map=mission_penalties,
+                    mission_penalty_factor=_MISSION_PENALTY_FACTOR,
+                    distance_time_cost_factor=weights.distance + weights.time,
+                    energy_cost_factor=weights.energy,
+                    energy_base_power_w=energy_base_power_w,
+                    risk_cost_factor=risk_factor,
+                    overlap_penalty=overlap_penalty,
+                    overlap_penalty_factor=2.0 + variant // len(_RISK_VARIANTS),
+                    clearance_voxels=clearance_voxels,
+                    max_turn_deg=mission.constraints.max_turn_deg,
+                    max_climb_fraction=(
+                        mission.constraints.climb_rate_mps / mission.constraints.speed_mps
+                    ),
+                    min_altitude_index=minimum_altitude_index,
+                    max_altitude_index=maximum_altitude_index,
+                    transition_cache=transition_cache,
+                    deadline=deadline,
+                    segment_cache=segment_cache,
+                )
+            except TimeoutError:
+                timed_out = True
+                path = []
+                break
             if leg is None:
                 path = []
                 break
             path.extend(leg[1:])
 
+        if timed_out:
+            break
         if len(path) < 2:
             continue
         flightworthy, _, _, _ = _route_is_flightworthy(
             path, mission, voxel_size_m
         )
+        # Penalize repeated search results as well as accepted routes so that
+        # a rejected near-duplicate does not consume every remaining attempt.
+        for point in path[1:-1]:
+            if point not in anchor_set:
+                overlap_penalty[point] += 1.0
         if not flightworthy:
             continue
 
@@ -342,7 +366,9 @@ def generate_route_candidates(
             existing_set = set(existing_path[1:-1]) - anchor_set
             union = path_set | existing_set
             similarity = len(path_set & existing_set) / max(1, len(union))
-            if similarity > _OVERLAP_LIMIT:
+            round_index = variant // (count * len(_RISK_VARIANTS))
+            overlap_limit = _OVERLAP_LIMIT if round_index == 0 else 0.97 if round_index == 1 else 1.0
+            if similarity > overlap_limit:
                 is_duplicate = True
                 break
         if is_duplicate:
@@ -352,14 +378,16 @@ def generate_route_candidates(
             path, mission, risk_map, planning_grid, voxel_size_m, origin_wgs84
         )
         routes.append(route)
-        for point in path[1:-1]:
-            if point not in anchor_set:
-                overlap_penalty[point] += 1.0
         if len(routes) == count:
             break
 
     if len(routes) == count:
         return routes, None
+    if timed_out:
+        return routes, (
+            f"탐색 제한 시간({time_budget_s:g}초)에 도달하여 "
+            f"확보한 후보 {len(routes)}개를 반환했습니다. 요청: {count}개."
+        )
     if not routes:
         reason = (
             "No route satisfies obstacle clearance, altitude, turn, climb-rate, "
@@ -367,8 +395,8 @@ def generate_route_candidates(
         )
     else:
         reason = (
-            f"Only {len(routes)} distinct feasible route(s) were found; "
-            f"{count} requested."
+            f"안전 조건을 만족하는 서로 다른 후보 {len(routes)}개를 확보했습니다. "
+            f"요청: {count}개. 추가 탐색에서도 후보를 확보하지 못했습니다."
         )
     return routes, reason
 

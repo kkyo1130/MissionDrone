@@ -3,6 +3,7 @@ from __future__ import annotations
 import heapq
 import itertools
 import math
+import time
 from typing import Dict, List, MutableMapping, Optional, Tuple
 
 import numpy as np
@@ -254,6 +255,8 @@ def find_path_weighted_astar(
     transition_cache: MutableMapping[
         Tuple[Point3D, Point3D], bool
     ],
+    deadline: Optional[float] = None,
+    segment_cache: Optional[dict] = None,
 ) -> Optional[List[Point3D]]:
     """Find a clearance-aware route while accounting for risk and prior routes."""
     if (
@@ -264,6 +267,8 @@ def find_path_weighted_astar(
     ):
         return None
 
+    if segment_cache is None:
+        segment_cache = {}
     initial = (start, previous)
     serial = itertools.count()
     minimum_movement_cost = distance_time_cost_factor + energy_cost_factor
@@ -279,6 +284,8 @@ def find_path_weighted_astar(
     cost_so_far = {initial: 0.0}
 
     while frontier:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError("Route search time budget exceeded")
         _, current_cost, _, state = heapq.heappop(frontier)
         if current_cost != cost_so_far.get(state):
             continue
@@ -310,17 +317,19 @@ def find_path_weighted_astar(
             ):
                 continue
 
-            step_distance = _distance(current, neighbor)
+            if transition not in segment_cache:
+                segment_cache[transition] = (
+                    _distance(current, neighbor),
+                    max(0.0, _segment_average(risk_map, current, neighbor)),
+                    max(0.0, _segment_average(mission_penalty_map, current, neighbor)),
+                )
+            step_distance, risk, mission_penalty = segment_cache[transition]
             if abs(neighbor[2] - current[2]) / step_distance > (
                 max_climb_fraction + 1e-9
             ):
                 continue
-            risk = max(0.0, _segment_average(risk_map, current, neighbor))
             overlap = max(
                 0.0, _segment_average(overlap_penalty, current, neighbor)
-            )
-            mission_penalty = max(
-                0.0, _segment_average(mission_penalty_map, current, neighbor)
             )
             climb_fraction = max(0, neighbor[2] - current[2]) / step_distance
             energy_factor = 1.0 + climb_fraction * 100.0 / energy_base_power_w

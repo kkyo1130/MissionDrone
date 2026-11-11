@@ -192,3 +192,92 @@ def test_optional_waypoints_are_soft_mission_objectives():
 
     assert penalties[5, 1, 1] == 0
     assert penalties[0, 1, 1] > penalties[5, 1, 1]
+
+
+def test_timeout_returns_completed_candidates(monkeypatch):
+    import numpy as np
+    from app.core import routing
+
+    mission = DeliveryMission.model_validate({
+        'mission_type': 'delivery', 'name': 'bounded search',
+        'start': [1, 1, 1], 'end': [3, 1, 1], 'payload_kg': 1,
+        'constraints': {'min_altitude_m': 0, 'max_altitude_m': 40,
+                        'speed_mps': 10, 'climb_rate_mps': 3,
+                        'battery_budget_wh': 100},
+    })
+    grid = np.ones((5, 5, 4), dtype=np.int8)
+    calls = []
+
+    def search(*args, **kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            return [(1, 1, 1), (2, 1, 1), (3, 1, 1)]
+        raise TimeoutError
+
+    monkeypatch.setattr(routing, 'find_path_weighted_astar', search)
+    routes, reason = routing.generate_route_candidates(
+        mission, grid, np.zeros_like(grid, dtype=float),
+        voxel_size_m=10, origin_wgs84=(126.62, 37.37, 0),
+        count=3, no_fly_zones=[], time_budget_s=10,
+    )
+    assert len(routes) == 1
+    assert '제한 시간' in reason
+    assert calls[0]['deadline'] == calls[1]['deadline']
+    assert calls[0]['segment_cache'] is calls[1]['segment_cache']
+
+    routes, reason = routing.generate_route_candidates(
+        mission, grid, np.zeros_like(grid, dtype=float),
+        voxel_size_m=10, origin_wgs84=(126.62, 37.37, 0),
+        count=3, no_fly_zones=[], time_budget_s=0,
+    )
+    assert routes == []
+    assert '제한 시간' in reason
+    assert len(calls) == 2
+
+
+def test_extended_search_returns_five_real_safe_routes():
+    import numpy as np
+    from app.core import routing
+    mission = DeliveryMission.model_validate({
+        'mission_type': 'delivery', 'name': 'five alternatives',
+        'start': [1, 1, 1], 'end': [10, 10, 1], 'payload_kg': 0,
+        'constraints': {'min_altitude_m': 0, 'max_altitude_m': 40,
+                        'speed_mps': 10, 'climb_rate_mps': 10,
+                        'clearance_m': 0, 'drone_radius_m': 0.1,
+                        'position_error_m': 0, 'max_turn_deg': 180,
+                        'battery_budget_wh': 100},
+    })
+    grid = np.ones((12, 12, 3), dtype=np.int8)
+    routes, reason = routing.generate_route_candidates(
+        mission, grid, np.zeros_like(grid, dtype=float), count=5,
+        voxel_size_m=10, origin_wgs84=(126.62, 37.37, 0), no_fly_zones=[])
+    assert len(routes) == 5
+    assert reason is None
+    assert len({tuple(map(tuple, r['points'])) for r in routes}) == 5
+    assert all(r['estimated_energy_wh'] <= 100 for r in routes)
+
+
+def test_duplicate_search_results_are_penalized_without_fabricating_candidates(monkeypatch):
+    import numpy as np
+    from app.core import routing
+    mission = DeliveryMission.model_validate({
+        'mission_type': 'delivery', 'name': 'single corridor',
+        'start': [1, 1, 1], 'end': [3, 1, 1], 'payload_kg': 0,
+        'constraints': {'min_altitude_m': 0, 'max_altitude_m': 40,
+                        'speed_mps': 10, 'climb_rate_mps': 3,
+                        'battery_budget_wh': 100},
+    })
+    penalties = []
+    def search(*args, **kwargs):
+        assert kwargs['deadline'] is None
+        penalties.append(float(kwargs['overlap_penalty'][2, 1, 1]))
+        return [(1, 1, 1), (2, 1, 1), (3, 1, 1)]
+    monkeypatch.setattr(routing, 'find_path_weighted_astar', search)
+    grid = np.ones((5, 5, 4), dtype=np.int8)
+    routes, reason = routing.generate_route_candidates(
+        mission, grid, np.zeros_like(grid, dtype=float), count=3,
+        voxel_size_m=10, origin_wgs84=(126.62, 37.37, 0), no_fly_zones=[])
+    assert len(routes) == 1
+    assert reason
+    assert penalties[-1] > penalties[0]
+    assert len(penalties) > 3 * len(routing._RISK_VARIANTS)

@@ -27,6 +27,7 @@ function setHudWidth(id, percentage) {
   if (element) element.style.width = `${Math.max(0, Math.min(100, percentage))}%`;
 }
 function refreshHud() {
+  updateWindOverlay();
   setHudText('hudWind', Number.isFinite(currentWindSpeed) ? currentWindSpeed.toFixed(1) : '미적용');
   setHudText('hudDirection', Number.isFinite(currentWindDirection) ? String(currentWindDirection) : '미적용');
   setHudText('hudWindMetric', Number.isFinite(currentWindSpeed) ? `${currentWindSpeed.toFixed(1)} m/s` : '미적용');
@@ -210,6 +211,7 @@ let currentWindDirection = windDirectionInput.value.trim() ? Number(windDirectio
 // clicks on extruded buildings resolve to a stable ground footprint.
 let activeMapPick = null;
 const pickedMarkers = {start: null, end: null};
+const waypointMarkers = [];
 const selectedBuildings = {start: null, end: null};
 const buildingEntities = new Map();
 const pointChecks = {start: null, end: null};
@@ -223,41 +225,50 @@ async function checkPickedPoint(kind, point, showFeedback = true) {
   const serial = ++pointCheckSerial[kind];
   pointChecks[kind] = null;
   refreshPointButtons();
-  const response = await fetch('/api/points/check', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({point, min_altitude_m: Number(document.getElementById('minAltitude').value),
-      max_altitude_m: Number(document.getElementById('maxAltitude').value)})
-  });
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.detail || '지점 검사 실패');
+  const check = async (candidate) => {
+    const response = await fetch('/api/points/check', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({point: candidate,
+        min_altitude_m: Number(document.getElementById('minAltitude').value),
+        max_altitude_m: Number(document.getElementById('maxAltitude').value)})
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.detail || '지점 검사 실패');
+    return result;
+  };
+  let result = await check(point);
   if (serial !== pointCheckSerial[kind]) return;
-  pointChecks[kind] = {valid: result.valid, point: point.join(',')};
+  let appliedPoint = point;
+  let corrected = false;
+  // A map selection is corrected automatically, but only after independently
+  // checking the proposed point. Never chain unbounded correction suggestions.
+  if (showFeedback && !result.valid && Array.isArray(result.suggested_point)) {
+    const suggested = result.suggested_point;
+    const verified = await check(suggested);
+    if (serial !== pointCheckSerial[kind]) return;
+    if (verified.valid === true) {
+      appliedPoint = suggested;
+      result = verified;
+      corrected = true;
+      const input = kind === 'start' ? startInput : endInput;
+      input.value = appliedPoint.join(',');
+      if (pickedMarkers[kind]) pickedMarkers[kind].position = voxelToCartesian(appliedPoint);
+    }
+  }
+  pointChecks[kind] = {valid: result.valid === true, point: appliedPoint.join(',')};
   const marker = pickedMarkers[kind];
   if (marker) marker.point.color = result.valid ? Cesium.Color.LIME : Cesium.Color.RED;
   if (showFeedback) {
+    const name = kind === 'start' ? '출발점' : '도착점';
     mapPickStatus.textContent = result.valid
-      ? (kind === 'start' ? '출발점' : '도착점') + ' 비행 가능 ✓ · ' + point.join(',')
-      : '⚠ 선택 불가: ' + result.reason + (result.suggested_point ? ' · 추천 좌표 ' + result.suggested_point.join(',') + ' (입력란에 적용 가능)' : ' · 주변 안전 좌표 없음');
+      ? name + (corrected ? ' 안전 좌표 자동 보정 완료 ✓ · ' : ' 비행 가능 ✓ · ') + appliedPoint.join(',')
+      : '⚠ 선택 불가: ' + result.reason + ' · 안전한 좌표를 확인하지 못했습니다. 다른 위치를 선택하세요.';
     mapPickStatus.style.color = result.valid ? '#86efac' : '#fca5a5';
   }
-  if (showFeedback && !result.valid && result.suggested_point) {
-    const apply = document.createElement('button');
-    apply.type = 'button';
-    apply.textContent = '추천 안전 좌표 적용 (' + result.suggested_point.join(',') + ')';
-    apply.className = 'secondary';
-    apply.style.marginTop = '8px';
-    apply.addEventListener('click', () => {
-      const input = kind === 'start' ? startInput : endInput;
-      input.value = result.suggested_point.join(',');
-      const marker = pickedMarkers[kind];
-      if (marker) marker.position = voxelToCartesian(result.suggested_point);
-      checkPickedPoint(kind, result.suggested_point).catch(error => {mapPickStatus.textContent = error.message;});
-      apply.remove();
-    });
-    mapPickStatus.append(document.createTextNode(' '), apply);
-  }
   refreshPointButtons();
+  return result;
 }
+
 function recheckEndpoints() {
   for (const [kind, input] of [['start', startInput], ['end', endInput]]) {
     try { checkPickedPoint(kind, parsePoint(input.value), false).catch(() => {pointChecks[kind] = null; refreshPointButtons();}); }
@@ -275,12 +286,22 @@ function setMapPickMode(mode) {
   viewer.canvas.style.cursor = mode ? 'crosshair' : '';
   pickStartButton.disabled = mode === 'start';
   pickEndButton.disabled = mode === 'end';
+  document.getElementById('btnPickWaypoint').disabled = mode === 'waypoint';
   mapPickStatus.textContent = mode
-    ? (mode === 'start' ? '출발점' : '도착점') + ' 선택 중 · 지도에서 위치를 클릭하세요.'
-    : '지도 선택 대기 중 · 출발점 또는 도착점 선택 버튼을 누르세요.';
+    ? (mode === 'start' ? '출발점' : mode === 'waypoint' ? '경유지' : '도착점') + ' 선택 중 · 지도에서 위치를 클릭하세요.'
+    : '지도 선택 대기 중 · 출발점·도착점·경유지 선택 버튼을 누르세요.';
 }
 pickStartButton.addEventListener('click', () => setMapPickMode('start'));
 pickEndButton.addEventListener('click', () => setMapPickMode('end'));
+document.getElementById('btnPickWaypoint').addEventListener('click', () => setMapPickMode('waypoint'));
+document.getElementById('btnClearWaypoints').addEventListener('click', () => {
+  document.getElementById('waypoints').value = '';
+  document.getElementById('requiredWaypoints').value = '';
+  waypointMarkers.forEach(marker => viewer.entities.remove(marker));
+  waypointMarkers.length = 0;
+  setMapPickMode(null);
+  viewer.scene.requestRender();
+});
 document.getElementById('btnCancelPick').addEventListener('click', () => setMapPickMode(null));
 async function buildBuildingMissionPoints(building, missionKind) {
   if (!building || !['inspection', 'disaster'].includes(missionKind)) return [];
@@ -316,6 +337,55 @@ async function buildBuildingMissionPoints(building, missionKind) {
     else if (result.suggested_point && !safe.some(p => p.join() === result.suggested_point.join())) safe.push(result.suggested_point);
   }
   return safe.filter((p, i, arr) => arr.findIndex(q => q.join() === p.join()) === i);
+}
+async function addPickedWaypoint(point) {
+    try {
+      const response = await fetch('/api/points/check', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({point,
+          min_altitude_m: Number(document.getElementById('minAltitude').value),
+          max_altitude_m: Number(document.getElementById('maxAltitude').value)})
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.detail || '경유지 검사 실패');
+      if (!result.valid) {
+        mapPickStatus.textContent = '경유지 선택 불가: ' + result.reason;
+        if (result.suggested_point) {
+          const apply = document.createElement('button');
+          apply.type = 'button';
+          apply.className = 'secondary';
+          apply.textContent = '추천 안전 좌표 적용 (' + result.suggested_point.join(',') + ')';
+          apply.addEventListener('click', () => addPickedWaypoint(result.suggested_point));
+          mapPickStatus.append(document.createTextNode(' '), apply);
+        } else {
+          mapPickStatus.append(document.createTextNode(' · 주변 안전 좌표 없음'));
+        }
+        return;
+      }
+      const field = document.getElementById('waypoints');
+      const points = parsePoints(field.value);
+      if (points.some(p => p.join(',') === point.join(','))) {
+        mapPickStatus.textContent = '이미 추가한 경유지입니다. 다른 위치를 선택하세요.';
+        return;
+      }
+      points.push(point);
+      field.value = points.map(p => p.join(',')).join('; ');
+      const required = document.getElementById('requiredWaypoints');
+      const requiredPoints = parsePoints(required.value);
+      if (!requiredPoints.some(p => p.join(',') === point.join(','))) requiredPoints.push(point);
+      required.value = requiredPoints.map(p => p.join(',')).join('; ');
+      const marker = viewer.entities.add({
+        position: voxelToCartesian(point),
+        point: {pixelSize: 12, color: Cesium.Color.ORANGE, outlineColor: Cesium.Color.WHITE,
+          outlineWidth: 2, disableDepthTestDistance: Number.POSITIVE_INFINITY},
+        label: {text: 'W' + points.length + ' 경유', font: 'bold 14px sans-serif',
+          pixelOffset: new Cesium.Cartesian2(0, -25), showBackground: true,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY}
+      });
+      waypointMarkers.push(marker);
+      mapPickStatus.textContent = '필수 경유지 추가 ✓ · ' + point.join(',') + ' · 계속 선택하거나 선택 취소를 누르세요.';
+      viewer.scene.requestRender();
+    } catch (error) { mapPickStatus.textContent = error.message; }
 }
 mapPickHandler.setInputAction(async (event) => {
   if (!activeMapPick) return;
@@ -361,6 +431,11 @@ mapPickHandler.setInputAction(async (event) => {
     return;
   }
   const point = [x, y, z];
+  if (kind === 'waypoint') {
+    await addPickedWaypoint(point);
+    return;
+  }
+
   const name = activeMapPick === 'start' ? '출발점' : '도착점';
   previous.value = point.join(',');
   if (pickedMarkers[kind]) viewer.entities.remove(pickedMarkers[kind]);
@@ -390,7 +465,8 @@ mapPickHandler.setInputAction(async (event) => {
   setMapPickMode(null);
   mapPickStatus.textContent = name + (roofAltitude !== null ? ' · 옥상 높이 ' + roofAltitude + 'm' : '') + ' 안전성 확인 중...';
   try {
-    await checkPickedPoint(kind, point);
+    const checked = await checkPickedPoint(kind, point);
+    if (!checked?.valid) return;
     if (building && ['inspection', 'disaster'].includes(missionKind)) {
       const points = await buildBuildingMissionPoints(building, missionKind);
       if (points.length) {
@@ -569,6 +645,57 @@ function clearRisk() {
   riskEntities = [];
 }
 
+let windFlowLayer = null;
+let windOverlayKey = null;
+function updateWindOverlay() {
+  const speed = currentWindSpeed;
+  const direction = currentWindDirection;
+  const valid = Number.isFinite(speed) && speed >= 0 && speed <= 60 &&
+    Number.isFinite(direction) && direction >= 0 && direction <= 360;
+  const key = `${speed}:${direction}:${gridSpec.shape.join(',')}`;
+  if (windOverlayKey === key) return;
+  windOverlayKey = key;
+  if (windFlowLayer) windFlowLayer.remove();
+  windFlowLayer = null;
+  const compass = document.getElementById('windFlowArrow');
+  compass.style.visibility = valid && speed > 0 ? 'visible' : 'hidden';
+  // This compass always uses north-up, independent of camera rotation.
+  compass.style.transform = `rotate(${valid ? (direction + 180) % 360 : 0}deg)`;
+  const names = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'];
+  setHudText('windFlowDescription', !valid ? '풍속·풍향을 입력하세요'
+    : speed === 0 ? '무풍 · 방향 없음'
+    : `${names[Math.round(direction / 45) % 8]}에서 → ${names[(Math.round(direction / 45) + 4) % 8]}으로`);
+  if (!valid || speed === 0) { viewer.scene.requestRender(); return; }
+  if (!document.getElementById('showWindFlow').checked) return;
+  if (!window.CesiumWind) {
+    setHudText('windFlowDescription', '바람 흐름 라이브러리 로드 실패');
+    return;
+  }
+  const nx = 128, ny = 128;
+  const south = gridOriginWgs84[1], west = gridOriginWgs84[0];
+  const north = south + gridSpec.shape[1] * gridSpec.voxelSizeM / 111132;
+  const east = west + gridSpec.shape[0] * gridSpec.voxelSizeM /
+    (111320 * Math.cos(Cesium.Math.toRadians(south)));
+  const header = {parameterCategory: 2, lo1: west, lo2: east,
+    la1: north, la2: south, dx: (east - west) / (nx - 1),
+    dy: (north - south) / (ny - 1), nx, ny};
+  const flow = BuildingWind.build({buildings: [...buildingEntities.values()],
+    west, south, width: gridSpec.shape[0] * gridSpec.voxelSizeM,
+    depth: gridSpec.shape[1] * gridSpec.voxelSizeM, speed, direction, nx, ny});
+  const field = [
+    {header: {...header, parameterNumber: 2}, data: flow.us},
+    {header: {...header, parameterNumber: 3}, data: flow.vs},
+  ];
+  windFlowLayer = new CesiumWind.WindLayer(field, {windOptions: {
+    paths: 1200, maxAge: 100, frameRate: 30, lineWidth: 1.6,
+    colorScale: '#a5f3fc', globalAlpha: 0.85,
+    velocityScale: 3 / (30 * 111132),
+  }});
+  windFlowLayer.addTo(viewer);
+
+  viewer.scene.requestRender();
+}
+
 function updateLayerStatus() {
   statusEl.textContent =
     `장애물 ${obstacleCount} 복셀 · 위험도 ${riskCount} 복셀 · ` +
@@ -609,7 +736,7 @@ function renderOsmBuilding(building, index) {
       hierarchy: Cesium.Cartesian3.fromDegreesArray(hierarchy),
       height: Number(building.height_m),
       extrudedHeight: Number(building.min_height_m) || 0,
-      material: Cesium.Color.fromCssColorString(color).withAlpha(0.92),
+      material: Cesium.Color.fromCssColorString(color),
       outline: true,
       outlineColor: Cesium.Color.fromCssColorString('#273d52'),
     },
@@ -687,6 +814,7 @@ async function loadEnvironment() {
   obstacleEntities.forEach((entity) => viewer.entities.remove(entity));
   obstacleEntities = [];
   buildingEntities.clear();
+  windOverlayKey = null;
   if (data.environment_kind === 'osm_buildings') {
     cityGroundEntities.forEach((entity) => viewer.entities.remove(entity));
     cityGroundEntities = [];
@@ -723,17 +851,15 @@ async function loadRiskMap() {
   }
 
   clearRisk();
-  // Absolute risk scale: green (low) -> yellow (medium) -> red (high).
-  // Do not normalize by the displayed voxels' maximum: that would make
-  // low-wind conditions look artificially dangerous.
-  const lowRiskColor = Cesium.Color.fromCssColorString('#22c55e');
-  const mediumRiskColor = Cesium.Color.fromCssColorString('#facc15');
-  const highRiskColor = Cesium.Color.fromCssColorString('#ef4444');
+  // Each voxel has its own risk; never normalize to the visible maximum.
+  const green = Cesium.Color.fromCssColorString('#22c55e');
+  const yellow = Cesium.Color.fromCssColorString('#facc15');
+  const red = Cesium.Color.fromCssColorString('#ef4444');
   for (const point of data.points) {
     const risk = Math.max(0, Math.min(1, Number(point.risk)));
     const color = risk <= 0.5
-      ? Cesium.Color.lerp(lowRiskColor, mediumRiskColor, risk * 2, new Cesium.Color())
-      : Cesium.Color.lerp(mediumRiskColor, highRiskColor, (risk - 0.5) * 2, new Cesium.Color());
+      ? Cesium.Color.lerp(green, yellow, risk * 2, new Cesium.Color())
+      : Cesium.Color.lerp(yellow, red, (risk - 0.5) * 2, new Cesium.Color());
     riskEntities.push(viewer.entities.add({
       position: voxelToCartesian([point.x, point.y, point.z]),
       box: {
@@ -743,7 +869,7 @@ async function loadRiskMap() {
           data.voxel_size_m,
         ),
         // Thin overlay: even overlapping low-risk voxels must not hide buildings.
-        material: color.withAlpha(0.055 + risk * 0.22),
+        material: color.withAlpha((0.055 + risk * 0.22) * 0.5),
         outline: false,
       },
       show: showRiskInput.checked,
@@ -787,7 +913,9 @@ function showDronePanel() {
   clearTimeout(droneHoverTimer);
   droneHoverTimer = null;
   updateDroneStatus();
-  const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
+  const screen = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, playbackCenter);
+  // Hidden elements have no offsetParent or measurable dimensions.
+  droneStatusPanel.hidden = false;
   if (screen) {
     const bounds = viewer.scene.canvas.getBoundingClientRect();
     const parent = droneStatusPanel.offsetParent.getBoundingClientRect();
@@ -815,13 +943,11 @@ droneStatusPanel.addEventListener('mouseenter', () => {
 droneStatusPanel.addEventListener('mouseleave', scheduleDronePanelHide);
 viewer.screenSpaceEventHandler.setInputAction((movement) => {
   if (!droneMarker || !playbackCenter) return;
-  const screen = Cesium.SceneTransforms.wgs84ToWindowCoordinates(viewer.scene, playbackCenter);
-  if (!screen) return;
-  const dx = movement.endPosition.x - screen.x;
-  const dy = movement.endPosition.y - screen.y;
-  // Screen-space proximity also works when route pins or 3D building polygons
-  // intercept Cesium's object picking.
-  if (dx * dx + dy * dy <= 48 * 48) {
+  // Pick every visible part of the 3D drone, including rotors and arms.
+  const overDrone = viewer.scene.drillPick(movement.endPosition)
+    .some((picked) => droneParts.includes(picked.id));
+  // Include the label above the body as a hover target through entity picking.
+  if (overDrone) {
     showDronePanel();
   } else if (!droneStatusPanel.hidden && !droneHoverTimer) {
     scheduleDronePanelHide();
@@ -899,56 +1025,12 @@ function addRoutePin(position, text, color) {
       text, font: 'bold 14px sans-serif', fillColor: Cesium.Color.WHITE,
       showBackground: true, backgroundColor: Cesium.Color.fromCssColorString('#0a1a36').withAlpha(0.92),
       backgroundPadding: new Cesium.Cartesian2(10, 7),
-      pixelOffset: new Cesium.Cartesian2(0, -29),
+      pixelOffset: new Cesium.Cartesian2(30, 28),
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
   });
   routeMarkers.push(pin);
-}
-
-function makeDrone(positionProperty) {
-  // Drone is assembled from native Cesium shapes, requiring no external 3D asset.
-  // Body and four rotors follow the same animated center position.
-  const offsets = [
-    [0, 0, 0], [-2.4, -2.4, 0.2], [-2.4, 2.4, 0.2],
-    [2.4, -2.4, 0.2], [2.4, 2.4, 0.2],
-  ];
-  offsets.forEach(([dx, dy, dz], index) => {
-    const offsetPosition = new Cesium.CallbackProperty((time) => {
-      const center = positionProperty.getValue(time);
-      if (!center) return undefined;
-      const local = new Cesium.Cartesian3(dx, dy, dz);
-      const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
-      return Cesium.Matrix4.multiplyByPoint(transform, local, new Cesium.Cartesian3());
-    }, false);
-    droneParts.push(viewer.entities.add({
-      position: offsetPosition,
-      ellipsoid: {
-        radii: index === 0
-          ? new Cesium.Cartesian3(2.6, 1.8, 0.8)
-          : new Cesium.Cartesian3(1.6, 1.6, 0.15),
-        material: index === 0 ? droneBodyColor : droneAccentColor,
-        outline: true,
-        outlineColor: Cesium.Color.fromCssColorString('#142f57'),
-      },
-    }));
-  });
-  // Arms form the characteristic quadcopter cross.
-  for (const [dx, dy] of [[-2.4, -2.4], [-2.4, 2.4], [2.4, -2.4], [2.4, 2.4]]) {
-    droneParts.push(viewer.entities.add({
-      polyline: {
-        positions: new Cesium.CallbackProperty((time) => {
-          const center = positionProperty.getValue(time);
-          if (!center) return [];
-          const transform = Cesium.Transforms.eastNorthUpToFixedFrame(center);
-          const end = Cesium.Matrix4.multiplyByPoint(transform, new Cesium.Cartesian3(dx, dy, 0), new Cesium.Cartesian3());
-          return [center, end];
-        }, false),
-        width: 4, material: droneBodyColor,
-      },
-    }));
-  }
 }
 
 let playbackDistances = [];
@@ -975,17 +1057,22 @@ function prepareRoutePlayback(positions) {
   droneMarker = viewer.entities.add({
     name: '드론 · 마우스를 올려 상태 확인',
     position: Cesium.Cartesian3.clone(playbackCenter),
-    point: {
-      pixelSize: 26, color: Cesium.Color.CYAN,
-      outlineColor: Cesium.Color.WHITE, outlineWidth: 4,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    orientation: new Cesium.CallbackProperty(() =>
+      Cesium.Transforms.headingPitchRollQuaternion(playbackCenter, new Cesium.HeadingPitchRoll(0, 0, 0)), false),
+    model: {
+      uri: '/static/models/drone.glb',
+      minimumPixelSize: 90,
+      scale: 1,
+      shadows: Cesium.ShadowMode.DISABLED,
+      silhouetteColor: Cesium.Color.CYAN,
+      silhouetteSize: 1.5,
     },
     label: {
       text: '드론 · 출발 대기',
       font: 'bold 15px sans-serif', fillColor: Cesium.Color.WHITE,
       showBackground: true,
       backgroundColor: Cesium.Color.fromCssColorString('#071329').withAlpha(0.9),
-      pixelOffset: new Cesium.Cartesian2(0, -34),
+      pixelOffset: new Cesium.Cartesian2(0, -70),
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
@@ -1176,7 +1263,7 @@ document.getElementById('btnCandidates').addEventListener('click', async () => {
   }
   const button = document.getElementById('btnCandidates');
   button.disabled = true;
-  candidateSummary.textContent = '임무 조건에 따른 후보 항로 생성 중...';
+  candidateSummary.textContent = '안전한 후보 항로 3개를 탐색 중입니다. 3개가 확보되면 추가 탐색 없이 바로 표시합니다.';
   try {
     const response = await fetch(`/api/missions/${currentMissionId}/routes`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -1333,6 +1420,10 @@ windDirectionInput.addEventListener('change', () => {
     currentWindDirection = direction;
     refreshHud();
   }
+});
+document.getElementById('showWindFlow').addEventListener('change', () => {
+  windOverlayKey = null;
+  updateWindOverlay();
 });
 refreshHud();
 
